@@ -3,9 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // ESTA LÍNEA ES LA CLAVE: Debe coincidir con el nombre de tu repositorio
   base: '/BasketScore-Lovable/', 
   server: {
     host: "::",
@@ -18,7 +16,7 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__currenttime, "./src"),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 }));
