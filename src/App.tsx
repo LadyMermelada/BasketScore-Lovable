@@ -13,10 +13,11 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      {/* Añadimos basename para que funcione en la subcarpeta de GitHub Pages */}
+      <BrowserRouter basename="/BasketScore-Lovable">
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Todas las rutas personalizadas van arriba de la ruta "*" */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
