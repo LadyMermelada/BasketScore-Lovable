@@ -19,31 +19,31 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
   if (!isOpen) return null;
 
+  // Calculamos la URL de redirección dinámicamente según dónde estemos
+  const redirectUrl = window.location.origin + '/BasketScore-Lovable/';
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isSignUp) {
-        // REGISTRO
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            // Esto asegura que tras confirmar email vuelva a la app
-            emailRedirectTo: window.location.origin + '/BasketScore-Lovable/',
+            emailRedirectTo: redirectUrl,
           },
         });
         if (error) throw error;
-        toast.success('¡Revisa tu email para confirmar tu cuenta!');
+        toast.success('¡Email enviado! Confirma tu cuenta para entrar.');
       } else {
-        // LOGIN
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        toast.success('¡Bienvenido de nuevo!');
+        toast.success('¡Bienvenido!');
       }
       onClose();
     } catch (error: any) {
@@ -51,16 +51,6 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/BasketScore-Lovable/',
-      },
-    });
-    if (error) toast.error(error.message);
   };
 
   return (
@@ -87,20 +77,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
               {isSignUp ? 'Crea tu cuenta' : '¡Hola de nuevo!'}
             </h2>
             <p className="text-muted-foreground text-sm mb-6">
-              {isSignUp ? 'Empieza a guardar tus estadísticas en la nube.' : 'Ingresa para ver tu progreso histórico.'}
+              {isSignUp ? 'Tus tiros se guardarán en la nube.' : 'Ingresa para ver tus estadísticas.'}
             </p>
-
-            <Button variant="outline" className="w-full mb-6" onClick={handleGoogleLogin}>
-              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 mr-2" />
-              Continuar con Google
-            </Button>
-
-            <div className="relative mb-6">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-xs uppercase text-muted-foreground">
-                <span className="bg-card px-2">O con tu email</span>
-              </div>
-            </div>
 
             <form onSubmit={handleAuth} className="space-y-4 text-left">
               <div className="space-y-2">
