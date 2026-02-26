@@ -1,26 +1,39 @@
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/sonner';
-import { useSessions } from '@/hooks/useSessions';
-import { ZONES, ZONE_TYPE_LABELS } from '@/lib/zones';
-import { Session, exportSessions, importSessions } from '@/lib/sessions';
-import AppHeader from '@/components/AppHeader';
-import BasketCourt from '@/components/BasketCourt';
-import StatCard from '@/components/StatCard';
-import QuickLog from '@/components/QuickLog';
-import ShotModal from '@/components/ShotModal';
-import BottomNav from '@/components/BottomNav';
-import ProfileView from '@/components/ProfileView';
-import ClubView from '@/components/ClubView';
+import { useSessions } from '../hooks/useSessions';
+import { useAuth } from '../hooks/useAuth';
+import { ZONES } from '../lib/zones';
+import { Session } from '../lib/sessions';
+import AppHeader from '../components/AppHeader';
+import BasketCourt from '../components/BasketCourt';
+import StatCard from '../components/StatCard';
+import QuickLog from '../components/QuickLog';
+import ShotModal from '../components/ShotModal';
+import BottomNav from '../components/BottomNav';
+import ProfileView from '../components/ProfileView';
+import ClubView from '../components/ClubView';
+import AuthModal from '../components/AuthModal';
 
 type Tab = 'cancha' | 'club' | 'perfil';
 
 const Index = () => {
   const { sessions, addSession, updateSession, deleteSession, importAll } = useSessions();
+  const { isGuest } = useAuth();
+
   const [activeTab, setActiveTab] = useState<Tab>('cancha');
   const [modalOpen, setModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [editSession, setEditSession] = useState<Session | null>(null);
+
+  const handleTabChange = useCallback((tab: Tab) => {
+    if (tab !== 'cancha' && isGuest) {
+      setAuthModalOpen(true);
+      return;
+    }
+    setActiveTab(tab);
+  }, [isGuest]);
 
   const handleZoneClick = useCallback((zoneId: string) => {
     setSelectedZone(zoneId);
@@ -41,7 +54,7 @@ const Index = () => {
       date: data.date,
       total: data.total,
       made: data.made,
-      zoneType: zone?.type || '2p',
+      zoneType: zone?.type || '2p' as const,
       zoneLabel: zone?.label || data.zoneId,
       note: data.note,
     };
@@ -50,6 +63,8 @@ const Index = () => {
     } else {
       addSession(sessionData);
     }
+    setModalOpen(false);
+    setEditSession(null);
   }, [editSession, addSession, updateSession]);
 
   const handleDelete = useCallback((id: number) => {
@@ -59,6 +74,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Toaster position="top-center" />
+
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       <div className="p-4">
         <AnimatePresence mode="wait">
@@ -70,7 +87,15 @@ const Index = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <AppHeader sessions={sessions} onImport={importAll} />
+              <div className="mb-4">
+                {isGuest && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 text-center text-xs font-medium text-primary mb-4">
+                    🏀 Usuario Invitado (Regístrate para acceder a todos los datos)
+                  </div>
+                )}
+                <AppHeader sessions={sessions} onImport={importAll} />
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 max-w-5xl mx-auto">
                 <BasketCourt sessions={sessions} onZoneClick={handleZoneClick} />
                 <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
@@ -85,12 +110,14 @@ const Index = () => {
               </div>
             </motion.div>
           )}
-          {activeTab === 'club' && (
+
+          {activeTab === 'club' && !isGuest && (
             <motion.div key="club" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               <ClubView />
             </motion.div>
           )}
-          {activeTab === 'perfil' && (
+
+          {activeTab === 'perfil' && !isGuest && (
             <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               <ProfileView sessions={sessions} />
             </motion.div>
@@ -106,7 +133,7 @@ const Index = () => {
         onSave={handleSave}
       />
 
-      <BottomNav active={activeTab} onChange={setActiveTab} />
+      <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   );
 };
