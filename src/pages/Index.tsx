@@ -4,7 +4,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { useSessions } from '../hooks/useSessions';
 import { useAuth } from '../hooks/useAuth'; 
 import { ZONES } from '../lib/zones';
-import { Session } from '../lib/sessions';
 import { calculateProStats, filterToday, filterLast30Days } from '../lib/stats';
 
 import AppHeader from '../components/AppHeader';
@@ -14,177 +13,97 @@ import QuickLog from '../components/QuickLog';
 import ShotModal from '../components/ShotModal';
 import BottomNav from '../components/BottomNav';
 import ProfileView from '../components/ProfileView';
-import ClubView from '../components/ClubView';
 import AuthModal from '../components/AuthModal';
-
-type Tab = 'cancha' | 'club' | 'perfil';
 
 const Index = () => {
   const { sessions, addSession, updateSession, deleteSession, importAll } = useSessions();
   const { isGuest } = useAuth(); 
-  
-  const [activeTab, setActiveTab] = useState<Tab>('cancha');
+  const [activeTab, setActiveTab] = useState<'cancha' | 'club' | 'perfil'>('cancha');
   const [modalOpen, setModalOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
-  const [editSession, setEditSession] = useState<Session | null>(null);
 
-  const stats = useMemo(() => {
-    const today = calculateProStats(filterToday(sessions));
-    const monthly = calculateProStats(filterLast30Days(sessions));
-    return { today, monthly };
-  }, [sessions]);
+  const stats = useMemo(() => ({
+    today: calculateProStats(filterToday(sessions)),
+    monthly: calculateProStats(filterLast30Days(sessions))
+  }), [sessions]);
 
-  const handleTabChange = useCallback((tab: Tab) => {
-    if (tab !== 'cancha' && isGuest) {
-      setAuthModalOpen(true);
-      return;
-    }
-    setActiveTab(tab);
-  }, [isGuest]);
-
-  const handleZoneClick = useCallback((zoneId: string) => {
+  const handleZoneClick = (zoneId: string) => {
     setSelectedZone(zoneId);
-    setEditSession(null);
     setModalOpen(true);
-  }, []);
-
-  const handleEdit = useCallback((session: Session) => {
-    setSelectedZone(session.zoneId);
-    setEditSession(session);
-    setModalOpen(true);
-  }, []);
-
-  const handleSave = useCallback((data: { zoneId: string; date: string; total: number; made: number; note: string }) => {
-    const zone = ZONES.find(z => z.id === data.zoneId);
-    const sessionData = {
-      zoneId: data.zoneId,
-      date: data.date,
-      total: data.total,
-      made: data.made,
-      zoneType: (zone?.type || '2p') as "tl" | "2p" | "3p",
-      zoneLabel: zone?.label || data.zoneId,
-      note: data.note,
-    };
-
-    if (editSession) {
-      updateSession(editSession.id, sessionData);
-    } else {
-      addSession(sessionData);
-    }
-    setModalOpen(false);
-    setEditSession(null);
-  }, [editSession, addSession, updateSession]);
-
-  const handleDelete = useCallback((id: number | string) => {
-    if (confirm('¿Eliminar registro?')) deleteSession(id);
-  }, [deleteSession]);
+  };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <Toaster position="top-center" />
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-
+    <div className="min-h-screen bg-[#020617] text-slate-50 pb-24 selection:bg-[#57ea9d]/30">
+      <Toaster theme="dark" position="top-center" />
       <div className="p-4 max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           {activeTab === 'cancha' && (
-            <motion.div key="cancha" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <div className="mb-6">
-                {isGuest && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-[10px] font-black text-primary mb-4 tracking-widest uppercase">
-                    🏀 Modo Invitado
-                  </div>
-                )}
-                <AppHeader sessions={sessions} onImport={importAll} />
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-                <div className="bg-card rounded-3xl border border-border p-4 shadow-sm">
+            <motion.div key="cancha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <AppHeader sessions={sessions} onImport={importAll} />
+              
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 mt-6">
+                <div className="bg-slate-900/50 rounded-[2rem] border border-slate-800 p-6 shadow-2xl backdrop-blur-xl">
                   <BasketCourt sessions={sessions} onZoneClick={handleZoneClick} />
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Análisis (30d)</h3>
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-[11px] font-black text-[#57ea9d] uppercase tracking-[0.3em] ml-2">Performance Center</h3>
                   
                   <StatCard 
                     title="Puntos por Tiro (PPS)" 
                     value={stats.monthly.pps} 
-                    subtitle={`Hoy: ${stats.today.pps}`}
-                    sessions={sessions}
-                    metric="pps"
-                    zoneType="global"
-                    isHighlight 
-                    delay={0.1} 
+                    subtitle={`Hoy: ${stats.today.pps} PPS`}
+                    sessions={sessions} metric="pps" zoneType="global"
+                    isHighlight delay={0.1} 
                   />
 
                   <StatCard 
                     title="eFG% (Eficiencia)" 
                     value={stats.monthly.eFG} 
                     subtitle={`Hoy: ${stats.today.eFG}%`}
-                    sessions={sessions}
-                    metric="efg"
-                    zoneType="global"
+                    sessions={sessions} metric="efg" zoneType="global"
                     delay={0.15} 
                   />
 
-                  <StatCard 
-                    title="% 3 Puntos" 
-                    value={stats.monthly.threePct} 
-                    subtitle={`Hoy: ${stats.today.threePct}%`}
-                    sessions={sessions}
-                    zoneType="3p"
-                    delay={0.2} 
-                  />
-
-                  <StatCard 
-                    title="% 2 Puntos" 
-                    value={stats.monthly.twoPct} 
-                    subtitle={`Hoy: ${stats.today.twoPct}%`}
-                    sessions={sessions}
-                    zoneType="2p"
-                    delay={0.25} 
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <StatCard 
+                      title="% 3PT" 
+                      value={stats.monthly.threePct} 
+                      subtitle={`Hoy: ${stats.today.threePct}%`}
+                      sessions={sessions} metric="pct" zoneType="3p"
+                      delay={0.2} 
+                    />
+                    <StatCard 
+                      title="% 2PT" 
+                      value={stats.monthly.twoPct} 
+                      subtitle={`Hoy: ${stats.today.twoPct}%`}
+                      sessions={sessions} metric="pct" zoneType="2p"
+                      delay={0.25} 
+                    />
+                  </div>
 
                   <StatCard 
                     title="Tiros Libres (FT%)" 
                     value={stats.monthly.ftPct} 
                     subtitle={`Hoy: ${stats.today.ftPct}%`}
-                    sessions={sessions}
-                    zoneType="tl"
+                    sessions={sessions} metric="pct" zoneType="tl"
                     delay={0.3} 
                   />
                 </div>
               </div>
-
-              <div className="mt-8">
-                <QuickLog sessions={sessions} onEdit={handleEdit} onDelete={handleDelete} />
-              </div>
+              <div className="mt-10"><QuickLog sessions={sessions} onEdit={()=>{}} onDelete={deleteSession} /></div>
             </motion.div>
           )}
 
-          {activeTab === 'club' && !isGuest && (
-            <motion.div key="club" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ClubView />
-            </motion.div>
-          )}
-
-          {activeTab === 'perfil' && !isGuest && (
-            <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          {activeTab === 'perfil' && (
+            <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <ProfileView sessions={sessions} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      <ShotModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        zoneId={selectedZone}
-        editSession={editSession}
-        onSave={handleSave}
-      />
-
-      <BottomNav active={activeTab} onChange={handleTabChange} />
+      <ShotModal open={modalOpen} onClose={() => setModalOpen(false)} zoneId={selectedZone} onSave={(d) => addSession({...d, zoneType: '2p', zoneLabel: d.zoneId})} />
+      <BottomNav active={activeTab} onChange={setActiveTab} />
     </div>
   );
 };
