@@ -1,80 +1,51 @@
-import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
-import { Session, getPercentage } from '@/lib/sessions';
+import { LucideIcon } from 'lucide-react';
 
-interface Props {
+interface StatCardProps {
   title: string;
-  sessions: Session[];
-  zoneType: string;
+  value: string | number;
+  subtitle?: string;
+  icon?: LucideIcon;
   isHighlight?: boolean;
   delay?: number;
 }
 
-export default function StatCard({ title, sessions, zoneType, isHighlight, delay = 0 }: Props) {
-  const { average, chartData } = useMemo(() => {
-    const last30 = new Date();
-    last30.setDate(last30.getDate() - 30);
-
-    const filtered = zoneType === 'global'
-      ? sessions.filter(s => new Date(s.date) >= last30)
-      : sessions.filter(s => s.zoneType === zoneType && new Date(s.date) >= last30);
-
-    const totalMade = filtered.reduce((a, b) => a + b.made, 0);
-    const totalShots = filtered.reduce((a, b) => a + b.total, 0);
-    const average = getPercentage(totalMade, totalShots);
-
-    const sorted = (zoneType === 'global'
-      ? sessions.filter(s => s.zoneType)
-      : sessions.filter(s => s.zoneType === zoneType)
-    ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(-15);
-
-    const chartData = sorted.map(s => ({
-      pct: getPercentage(s.made, s.total),
-    }));
-
-    return { average, chartData };
-  }, [sessions, zoneType]);
-
+const StatCard = ({ title, value, subtitle, icon: Icon, isHighlight, delay = 0 }: StatCardProps) => {
   return (
     <motion.div
-      className={`rounded-xl border p-3 transition-all duration-300 ${
-        isHighlight
-          ? 'glass-card-accent'
-          : 'glass-card hover:border-primary/20'
-      }`}
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}
+      transition={{ delay }}
+      className={`relative overflow-hidden rounded-2xl p-4 border ${
+        isHighlight 
+        ? 'bg-primary/10 border-primary/30 shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]' 
+        : 'bg-card border-border'
+      }`}
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
-        <span className={`font-mono text-lg font-bold ${isHighlight ? 'text-primary stat-glow' : 'text-foreground'}`}>
-          {average > 0 ? `${average}%` : '--'}
-        </span>
-      </div>
-      {chartData.length > 1 && (
-        <div className="h-10 w-full mt-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id={`grad-${zoneType}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="pct"
-                stroke="hsl(var(--primary))"
-                strokeWidth={1.5}
-                fill={`url(#grad-${zoneType})`}
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+      {isHighlight && (
+        <div className="absolute top-0 right-0 p-2 opacity-10">
+          <div className="w-16 h-16 rounded-full bg-primary" />
         </div>
+      )}
+      
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+        {title}
+      </p>
+      
+      <div className="flex items-baseline gap-1">
+        <span className={`text-2xl font-black tracking-tight ${isHighlight ? 'text-primary' : 'text-foreground'}`}>
+          {value === "0.00" || value === "0.0" ? "—" : value}
+        </span>
+        {title.includes('%') && value !== "0.0" && <span className="text-sm font-bold opacity-70">%</span>}
+      </div>
+
+      {subtitle && (
+        <p className="text-[10px] text-muted-foreground mt-1 font-medium italic">
+          {subtitle}
+        </p>
       )}
     </motion.div>
   );
-}
+};
+
+export default StatCard;
