@@ -1,80 +1,53 @@
-import { motion } from 'framer-motion';
-import { Session, getPercentage } from '@/lib/sessions';
+import { Session } from '../lib/sessions';
+import { formatDateLocal } from '../lib/stats';
 import { Settings, Trash2 } from 'lucide-react';
 
-interface Props {
+interface QuickLogProps {
   sessions: Session[];
   onEdit: (session: Session) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string | number) => void;
 }
 
-export default function QuickLog({ sessions, onEdit, onDelete }: Props) {
-  const last5 = [...sessions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
-
-  if (last5.length === 0) {
-    return (
-      <div className="glass-card p-4 text-center text-sm text-muted-foreground">
-        Aún no hay sesiones registradas. ¡Toca una zona de la cancha para empezar!
-      </div>
-    );
-  }
-
+const QuickLog = ({ sessions, onEdit, onDelete }: QuickLogProps) => {
   return (
-    <motion.div
-      className="glass-card overflow-hidden"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-    >
-      <div className="p-3 border-b border-border">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Últimas 5 Sesiones
-        </h3>
-      </div>
+    <div className="bg-card rounded-3xl border border-border overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[400px]">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left p-3 text-[0.6rem] font-medium uppercase tracking-wider text-muted-foreground">Fecha</th>
-              <th className="text-left p-3 text-[0.6rem] font-medium uppercase tracking-wider text-muted-foreground">Zona</th>
-              <th className="text-left p-3 text-[0.6rem] font-medium uppercase tracking-wider text-muted-foreground">Ratio</th>
-              <th className="text-left p-3 text-[0.6rem] font-medium uppercase tracking-wider text-muted-foreground">%</th>
-              <th className="p-3 text-[0.6rem]"></th>
+        <table className="w-full text-sm text-left">
+          <thead className="bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground tracking-widest border-b border-border">
+            <tr>
+              <th className="px-6 py-4">Fecha</th>
+              <th className="px-6 py-4">Zona</th>
+              <th className="px-6 py-4">Ratio</th>
+              <th className="px-6 py-4">%</th>
+              <th className="px-6 py-4 text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            {last5.map((s) => {
-              const pct = getPercentage(s.made, s.total);
-              return (
-                <tr key={s.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                  <td className="p-3 font-mono text-xs text-muted-foreground">{s.date.slice(5)}</td>
-                  <td className="p-3 text-xs font-semibold text-foreground">{s.zoneLabel}</td>
-                  <td className="p-3 font-mono text-xs text-muted-foreground">{s.made}/{s.total}</td>
-                  <td className={`p-3 font-mono text-xs font-bold ${pct >= 50 ? 'text-primary' : 'text-muted-foreground'}`}>
-                    {pct}%
-                  </td>
-                  <td className="p-3 flex gap-1">
-                    <button
-                      onClick={() => onEdit(s)}
-                      className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Settings size={14} />
-                    </button>
-                    <button
-                      onClick={() => onDelete(s.id)}
-                      className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+          <tbody className="divide-y divide-border">
+            {sessions.map((session) => (
+              <tr key={session.id} className="hover:bg-muted/30 transition-colors group">
+                <td className="px-6 py-4 font-medium text-muted-foreground">
+                  {formatDateLocal(session.date)}
+                </td>
+                <td className="px-6 py-4 font-bold">{session.zoneId.replace(/_/g, ' ')}</td>
+                <td className="px-6 py-4 font-mono text-xs opacity-70">{session.made}/{session.total}</td>
+                <td className="px-6 py-4 font-black text-primary">
+                  {((session.made / session.total) * 100).toFixed(0)}%
+                </td>
+                <td className="px-6 py-4 text-right flex justify-end gap-2">
+                  <button onClick={() => onEdit(session)} className="p-2 hover:bg-primary/10 rounded-lg text-muted-foreground hover:text-primary transition-colors">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => onDelete(session.id)} className="p-2 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
-    </motion.div>
+    </div>
   );
-}
+};
+
+export default QuickLog;
