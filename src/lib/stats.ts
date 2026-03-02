@@ -1,14 +1,19 @@
 import { Session } from './sessions';
 
+// Exportamos la función de fecha que QuickLog necesita
+export const formatDateLocal = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+};
+
 export const filterLast30Days = (sessions: Session[]) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  // Comparamos el objeto Date del registro para que respete fechas manuales pasadas
   return sessions.filter(s => new Date(s.date) >= thirtyDaysAgo);
 };
 
 export const filterToday = (sessions: Session[]) => {
-  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+  const today = new Date().toLocaleDateString('en-CA'); 
   return sessions.filter(s => s.date.startsWith(today));
 };
 
@@ -22,7 +27,6 @@ export const calculateProStats = (sessions: Session[]) => {
   };
 
   sessions.forEach(s => {
-    // SEPARACIÓN ESTRICTA: Solo sumamos si el tipo coincide exactamente
     if (s.zoneType === '2p') {
       stats.made2p += s.made;
       stats.att2p += s.total;
