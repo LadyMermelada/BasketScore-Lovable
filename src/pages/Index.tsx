@@ -1,10 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/sonner';
 import { useSessions } from '../hooks/useSessions';
 import { useAuth } from '../hooks/useAuth'; 
 import { ZONES } from '../lib/zones';
 import { calculateProStats, filterToday, filterLast30Days } from '../lib/stats';
+import { supabase } from '../lib/supabase'; // Importante para el limbo
 
 import AppHeader from '../components/AppHeader';
 import BasketCourt from '../components/BasketCourt';
@@ -18,14 +19,27 @@ import AuthModal from '../components/AuthModal';
 
 const Index = () => {
   const { sessions = [], addSession, deleteSession, importAll, loading } = useSessions();
-  const { isGuest } = useAuth(); 
+  const { isGuest, user } = useAuth(); 
   
   const [activeTab, setActiveTab] = useState<'cancha' | 'club' | 'perfil'>('cancha');
   const [modalOpen, setModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
-  // Stats calculadas con extrema precaución
+  // EFECTO ANTI-LIMBO: Si el usuario no existe en la DB pero hay sesión, cerramos
+  useEffect(() => {
+    const checkSession = async () => {
+      if (user) {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user) {
+           localStorage.clear();
+           window.location.reload();
+        }
+      }
+    };
+    checkSession();
+  }, [user]);
+
   const stats = useMemo(() => {
     const safeSessions = Array.isArray(sessions) ? sessions : [];
     return {
@@ -34,19 +48,11 @@ const Index = () => {
     };
   }, [sessions]);
 
-  const handleZoneClick = useCallback((zoneId: string) => {
-    setSelectedZone(zoneId);
-    setModalOpen(true);
-  }, []);
-
-  // Evitamos pantalla negra: si carga, mostramos un fondo oscuro con mensaje
   if (loading && sessions.length === 0) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center space-y-4">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-primary font-black text-[10px] tracking-[0.3em] uppercase animate-pulse">
-          Sincronizando Stats...
-        </p>
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-primary font-black text-[10px] tracking-widest uppercase animate-pulse">Sincronizando...</p>
       </div>
     );
   }
@@ -61,30 +67,27 @@ const Index = () => {
           {activeTab === 'cancha' && (
             <motion.div key="cancha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="mb-6">
+                {isGuest && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-[10px] font-black text-primary mb-4 tracking-widest uppercase shadow-sm">
+                    🏀 MODO INVITADO
+                  </div>
+                )}
                 <AppHeader sessions={sessions} onImport={importAll} />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-                <div className="bg-card rounded-[2rem] border border-border p-4 shadow-sm min-h-[300px] flex items-center justify-center">
-                  {/* Pasamos siempre un array, aunque sea vacío */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+                {/* Contenedor con altura mínima forzada para la cancha */}
+                <div className="bg-card rounded-[2rem] border border-border p-4 shadow-sm min-h-[350px] md:h-[450px] flex items-center justify-center relative">
                   <BasketCourt 
-                    sessions={Array.isArray(sessions) ? sessions : []} 
-                    onZoneClick={handleZoneClick} 
+                    sessions={sessions} 
+                    onZoneClick={(id) => { setSelectedZone(id); setModalOpen(true); }} 
                   />
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <StatCard 
-                    title="PPS (30d)" sessions={sessions} zoneType="global" metric="pps"
-                    value={stats.monthly.pps} subtitle={`Hoy: ${stats.today.pps}`}
-                    isHighlight delay={0.1} 
-                  />
-                  <StatCard 
-                    title="eFG% (30d)" sessions={sessions} zoneType="global" metric="efg"
-                    value={stats.monthly.eFG} subtitle={`Hoy: ${stats.today.eFG}%`}
-                    delay={0.15} 
-                  />
-                  <StatCard title="Tiros Libres" sessions={sessions} zoneType="tl" value={stats.monthly.ftPct} delay={0.2} />
+                  <StatCard title="PPS (30d)" sessions={sessions} zoneType="global" metric="pps" value={stats.monthly.pps} subtitle={`Hoy: ${stats.today.pps}`} isHighlight delay={0.1} />
+                  <StatCard title="eFG% (30d)" sessions={sessions} zoneType="global" metric="efg" value={stats.monthly.eFG} subtitle={`Hoy: ${stats.today.eFG}%`} delay={0.15} />
+                  <StatCard title="Tiros Libres" sessions={sessions} zoneType="tl" value={stats.monthly.ftPct} subtitle={`Hoy: ${stats.today.ftPct}%`} delay={0.2} />
                   <StatCard title="2 Puntos" sessions={sessions} zoneType="2p" value={stats.monthly.twoPct} delay={0.25} />
                   <StatCard title="3 Puntos" sessions={sessions} zoneType="3p" value={stats.monthly.threePct} delay={0.3} />
                 </div>
