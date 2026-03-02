@@ -9,26 +9,20 @@ export const useSessions = () => {
   const [loading, setLoading] = useState(true);
   const { user, isGuest } = useAuth();
 
-  // --- 1. CARGA DE DATOS ---
   const loadSessions = useCallback(async () => {
     setLoading(true);
-    try {
-      if (isGuest) {
-        // MODO INVITADO: Leer de LocalStorage
-        const localData = localStorage.getItem('basket-sessions');
-        setSessions(localData ? JSON.parse(localData) : []);
-      } else if (user) {
-        // MODO PRO: Leer de Supabase
-        const { data, error } = await supabase
-          .from('shooting_sessions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+    if (isGuest) {
+      const localData = localStorage.getItem('basket-sessions');
+      setSessions(localData ? JSON.parse(localData) : []);
+    } else if (user) {
+      const { data, error } = await supabase
+        .from('shooting_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
-
-        // Mapeamos los campos de la BD al formato que usa tu App
-        const mappedSessions: Session[] = data.map(s => ({
+      if (!error && data) {
+        setSessions(data.map(s => ({
           id: s.id,
           zoneId: s.zone_id,
           zoneType: s.zone_type,
@@ -36,97 +30,83 @@ export const useSessions = () => {
           total: s.total,
           date: s.created_at,
           note: s.note,
-          zoneLabel: s.zone_id // O el mapeo que prefieras
-        }));
-        setSessions(mappedSessions);
+          zoneLabel: s.zone_id
+        })));
       }
-    } catch (error) {
-      console.error('Error cargando sesiones:', error);
-      toast.error('Error al cargar los datos');
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }, [user, isGuest]);
 
-  useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+  useEffect(() => { loadSessions(); }, [loadSessions]);
 
-  // --- 2. AGREGAR SESIÓN ---
-  const addSession = async (newSession: Omit<Session, 'id'>) => {
+  const addSession = async (newData: Omit<Session, 'id'>) => {
+    // Normalizamos la fecha a "YYYY-MM-DD" para comparar solo el día
+    const todayStr = new Date(newData.date).toISOString().split('T')[0];
+
     if (isGuest) {
-      const sessionWithId = { ...newSession, id: Date.now() };
-      const updated = [sessionWithId, ...sessions];
-      setSessions(updated);
-      localStorage.setItem('basket-sessions', JSON.stringify(updated));
-      toast.success('Sesión guardada localmente');
-    } else if (user) {
-      const { data, error } = await supabase
-        .from('shooting_sessions')
-        .insert([{
-          user_id: user.id,
-          zone_id: newSession.zoneId,
-          zone_type: newSession.zoneType,
-          made: newSession.made,
-          total: newSession.total,
-          note: newSession.note,
-          created_at: newSession.date
-        }])
-        .select();
+      const updatedSessions = [...sessions];
+      const existingIdx = updatedSessions.findIndex(s => 
+        s.zoneId === newData.zoneId && s.date.startsWith(todayStr)
+      );
 
-      if (error) {
-        toast.error('Error al guardar en la nube');
+      if (existingIdx !== -1) {
+        updatedSessions[existingIdx].made += newData.made;
+        updatedSessions[existingIdx].total += newData.total;
+        updatedSessions[existingIdx].note = newData.note || updatedSessions[existingIdx].note;
       } else {
-        loadSessions(); // Recargamos para ver el cambio
-        toast.success('Sesión guardada en Supabase');
+        updatedSessions.unshift({ ...newData, id: Date.now() });
       }
-    }
-  };
-
-  // --- 3. ACTUALIZAR SESIÓN ---
-  const updateSession = async (id: string | number, updates: Partial<Session>) => {
-    if (isGuest) {
-      const updated = sessions.map(s => s.id === id ? { ...s, ...updates } : s);
-      setSessions(updated);
-      localStorage.setItem('basket-sessions', JSON.stringify(updated));
-    } else {
-      const { error } = await supabase
+      
+      setSessions(updatedSessions);
+      localStorage.setItem('basket-sessions', JSON.stringify(updatedSessions));
+      toast.success('Sesión actualizada localmente');
+    } else if (user) {
+      // Lógica Supabase: Buscamos si existe la sesión hoy
+      const { data: existing } = await supabase
         .from('shooting_sessions')
-        .update({
-          made: updates.made,
-          total: updates.total,
-          note: updates.note
-        })
-        .eq('id', id);
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('zone_id', newData.zoneId)
+        .gte('created_at', `${todayStr}T00:00:00`)
+        .lte('created_at', `${todayStr}T23:59:59`)
+        .single();
 
-      if (error) toast.error('Error al actualizar');
-      else loadSessions();
+      if (existing) {
+        const { error } = await supabase
+          .from('shooting_sessions')
+          .update({
+            made: existing.made + newData.made,
+            total: existing.total + newData.total,
+            note: newData.note || existing.note
+          })
+          .eq('id', existing.id);
+        if (!error) loadSessions();
+      } else {
+        await supabase.from('shooting_sessions').insert([{
+          user_id: user.id,
+          zone_id: newData.zoneId,
+          zone_type: newData.zoneType,
+          made: newData.made,
+          total: newData.total,
+          note: newData.note,
+          created_at: newData.date
+        }]);
+        loadSessions();
+      }
+      toast.success('¡Estadísticas actualizadas!');
     }
   };
 
-  // --- 4. ELIMINAR SESIÓN ---
   const deleteSession = async (id: string | number) => {
     if (isGuest) {
       const updated = sessions.filter(s => s.id !== id);
       setSessions(updated);
       localStorage.setItem('basket-sessions', JSON.stringify(updated));
     } else {
-      const { error } = await supabase
-        .from('shooting_sessions')
-        .delete()
-        .eq('id', id);
-
-      if (error) toast.error('Error al eliminar');
-      else loadSessions();
+      await supabase.from('shooting_sessions').delete().eq('id', id);
+      loadSessions();
     }
   };
 
-  return {
-    sessions,
-    loading,
-    addSession,
-    updateSession,
-    deleteSession,
-    importAll: loadSessions // Mantenemos compatibilidad con AppHeader
-  };
+  return { sessions, loading, addSession, deleteSession, importAll: loadSessions };
 };
