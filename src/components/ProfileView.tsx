@@ -2,13 +2,14 @@ import { useState, useMemo } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Session } from '../lib/sessions';
 import { calculateProStats, getPlayerRank } from '../lib/stats';
-import { Award, TrendingUp, Target, User } from 'lucide-react';
+import { TrendingUp, User } from 'lucide-react';
 
 const ProfileView = ({ sessions }: { sessions: Session[] }) => {
   const [metric, setMetric] = useState<'pps' | 'efg' | 'raw'>('pps');
   const stats = calculateProStats(sessions);
   const rank = getPlayerRank(stats.pps);
 
+  // AGRUPACIÓN DIARIA PARA LÍNEA FLUIDA
   const chartData = useMemo(() => {
     const daily: any = {};
     sessions.forEach(s => {
@@ -31,43 +32,43 @@ const ProfileView = ({ sessions }: { sessions: Session[] }) => {
   }, [sessions]);
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      <div className="bg-slate-900/80 border border-slate-800 rounded-[2.5rem] p-10 text-center relative overflow-hidden">
+    <div className="space-y-8 max-w-5xl mx-auto px-2">
+      {/* HEADER NEÓN */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-[2.5rem] p-10 text-center relative overflow-hidden shadow-2xl">
         <div className={`absolute top-6 right-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${rank.bg} ${rank.color} border border-current/20`}>
           {rank.label}
         </div>
-        <div className="mx-auto w-24 h-24 bg-[#57ea9d]/10 rounded-full flex items-center justify-center mb-6 border-2 border-[#57ea9d]/20">
-          <User className="w-12 h-12 text-[#57ea9d]" />
+        <div className="mx-auto w-20 h-20 bg-[#57ea9d]/10 rounded-full flex items-center justify-center mb-4 border-2 border-[#57ea9d]/20">
+          <User className="w-10 h-10 text-[#57ea9d]" />
         </div>
-        <h2 className="text-3xl font-black mb-8 tracking-tighter">Estadísticas de Élite</h2>
-        <div className="flex justify-center gap-12">
+        <div className="flex justify-center gap-12 mt-6">
           <div className="text-center">
-            <p className="text-4xl font-black text-[#57ea9d]">{stats.pps}</p>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">PPS Global</p>
+            <p className="text-5xl font-black text-[#57ea9d] tracking-tighter">{stats.pps}</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">PPS Global</p>
           </div>
           <div className="text-center">
-            <p className="text-4xl font-black text-[#57ea9d]">{stats.eFG}%</p>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">eFG% Total</p>
+            <p className="text-5xl font-black text-[#57ea9d] tracking-tighter">{stats.eFG}%</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">eFG% Total</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
-        <div className="flex justify-between items-center mb-10">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="text-[#57ea9d] w-6 h-6" />
-            <h3 className="font-black text-lg uppercase tracking-tight">Progresión Temporal</h3>
-          </div>
-          <div className="flex bg-slate-950 p-1.5 rounded-2xl gap-2 border border-slate-800">
+      {/* GRÁFICA HISTÓRICA PROFESIONAL */}
+      <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-xl">
+        <div className="flex justify-between items-center mb-8">
+          <h3 className="font-black text-sm uppercase tracking-widest flex items-center gap-2">
+            <TrendingUp className="text-[#57ea9d] w-5 h-5" /> Progresión Histórica
+          </h3>
+          <div className="flex bg-muted p-1 rounded-xl gap-1">
             {(['pps', 'efg', 'raw'] as const).map(m => (
-              <button key={m} onClick={() => setMetric(m)} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${metric === m ? 'bg-[#57ea9d] text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>
+              <button key={m} onClick={() => setMetric(m)} className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${metric === m ? 'bg-[#57ea9d] text-slate-950' : 'text-muted-foreground hover:text-foreground'}`}>
                 {m}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="h-[350px] w-full">
+        <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>
@@ -76,14 +77,21 @@ const ProfileView = ({ sessions }: { sessions: Session[] }) => {
                   <stop offset="95%" stopColor="#57ea9d" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.5} />
               <XAxis dataKey="fecha" fontSize={10} tickLine={false} axisLine={false} tick={{fill: '#64748b'}} />
               <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{fill: '#64748b'}} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid #57ea9d', color: '#fff' }}
+                contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid #57ea9d' }}
                 cursor={{ stroke: '#57ea9d', strokeWidth: 2 }}
               />
-              <Area type="monotone" dataKey={metric} stroke="#57ea9d" strokeWidth={4} fill="url(#mainGrad)" dot={{ r: 5, fill: '#0f172a', stroke: '#57ea9d', strokeWidth: 3 }} />
+              <Area 
+                type="monotone" 
+                dataKey={metric} 
+                stroke="#57ea9d" 
+                strokeWidth={4} 
+                fill="url(#mainGrad)" 
+                dot={{ r: 5, fill: '#0f172a', stroke: '#57ea9d', strokeWidth: 3 }} 
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
