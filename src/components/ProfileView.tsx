@@ -9,7 +9,6 @@ const ProfileView = ({ sessions }: { sessions: Session[] }) => {
   const stats = calculateProStats(sessions);
   const rank = getPlayerRank(stats.pps);
 
-  // AGRUPACIÓN DIARIA PARA LÍNEA FLUIDA
   const chartData = useMemo(() => {
     const daily: any = {};
     sessions.forEach(s => {
@@ -33,7 +32,6 @@ const ProfileView = ({ sessions }: { sessions: Session[] }) => {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto px-2">
-      {/* HEADER NEÓN */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-[2.5rem] p-10 text-center relative overflow-hidden shadow-2xl">
         <div className={`absolute top-6 right-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${rank.bg} ${rank.color} border border-current/20`}>
           {rank.label}
@@ -53,7 +51,6 @@ const ProfileView = ({ sessions }: { sessions: Session[] }) => {
         </div>
       </div>
 
-      {/* GRÁFICA HISTÓRICA PROFESIONAL */}
       <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-xl">
         <div className="flex justify-between items-center mb-8">
           <h3 className="font-black text-sm uppercase tracking-widest flex items-center gap-2">
@@ -100,4 +97,4 @@ const ProfileView = ({ sessions }: { sessions: Session[] }) => {
   );
 };
 
-export default ProfileView;
+export default ProfileView; // <-- ESTA LÍNEA TAMBIÉN FALTABA
