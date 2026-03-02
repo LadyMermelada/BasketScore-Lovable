@@ -7,7 +7,6 @@ import { ZONES } from '../lib/zones';
 import { Session } from '../lib/sessions';
 import { calculateProStats, filterToday, filterLast30Days } from '../lib/stats';
 
-// Componentes
 import AppHeader from '../components/AppHeader';
 import BasketCourt from '../components/BasketCourt';
 import StatCard from '../components/StatCard';
@@ -30,14 +29,12 @@ const Index = () => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [editSession, setEditSession] = useState<Session | null>(null);
 
-  // --- CÁLCULO DE ESTADÍSTICAS ---
   const stats = useMemo(() => {
     const today = calculateProStats(filterToday(sessions));
     const monthly = calculateProStats(filterLast30Days(sessions));
     return { today, monthly };
   }, [sessions]);
 
-  // --- HANDLERS ---
   const handleTabChange = useCallback((tab: Tab) => {
     if (tab !== 'cancha' && isGuest) {
       setAuthModalOpen(true);
@@ -86,22 +83,16 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <Toaster position="top-center" />
-      
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       <div className="p-4 max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           {activeTab === 'cancha' && (
-            <motion.div
-              key="cancha"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
+            <motion.div key="cancha" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               <div className="mb-6">
                 {isGuest && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-xs font-bold text-primary mb-4">
-                    🏀 MODO INVITADO
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-[10px] font-black text-primary mb-4 tracking-widest uppercase">
+                    🏀 Modo Invitado
                   </div>
                 )}
                 <AppHeader sessions={sessions} onImport={importAll} />
@@ -112,50 +103,54 @@ const Index = () => {
                   <BasketCourt sessions={sessions} onZoneClick={handleZoneClick} />
                 </div>
 
-                {/* PANEL DE ESTADÍSTICAS REFORMADO */}
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-1">
-                    Rendimiento (30 Días)
-                  </h3>
+                  <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">Análisis (30d)</h3>
                   
-                  {/* 1. PPS */}
                   <StatCard 
                     title="Puntos por Tiro (PPS)" 
                     value={stats.monthly.pps} 
                     subtitle={`Hoy: ${stats.today.pps}`}
+                    sessions={sessions}
+                    metric="pps"
+                    zoneType="global"
                     isHighlight 
                     delay={0.1} 
                   />
 
-                  {/* 2. eFG% */}
                   <StatCard 
-                    title="eFG% (Eficiencia Real)" 
+                    title="eFG% (Eficiencia)" 
                     value={stats.monthly.eFG} 
                     subtitle={`Hoy: ${stats.today.eFG}%`}
+                    sessions={sessions}
+                    metric="efg"
+                    zoneType="global"
                     delay={0.15} 
                   />
 
-                  {/* 3. %3pts */}
                   <StatCard 
                     title="% 3 Puntos" 
                     value={stats.monthly.threePct} 
                     subtitle={`Hoy: ${stats.today.threePct}%`}
+                    sessions={sessions}
+                    zoneType="3p"
                     delay={0.2} 
                   />
 
-                  {/* 4. %2pts */}
                   <StatCard 
                     title="% 2 Puntos" 
                     value={stats.monthly.twoPct} 
                     subtitle={`Hoy: ${stats.today.twoPct}%`}
+                    sessions={sessions}
+                    zoneType="2p"
                     delay={0.25} 
                   />
 
-                  {/* 5. FT% */}
                   <StatCard 
                     title="Tiros Libres (FT%)" 
                     value={stats.monthly.ftPct} 
                     subtitle={`Hoy: ${stats.today.ftPct}%`}
+                    sessions={sessions}
+                    zoneType="tl"
                     delay={0.3} 
                   />
                 </div>
