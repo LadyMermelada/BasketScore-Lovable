@@ -7,45 +7,44 @@ export const formatDateLocal = (dateStr: string) => {
 };
 
 export const filterLast30Days = (sessions: Session[] = []) => {
-  if (!Array.isArray(sessions)) return [];
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  return sessions.filter(s => s && s.date && new Date(s.date) >= thirtyDaysAgo);
+  return safeSessions.filter(s => s && s.date && new Date(s.date) >= thirtyDaysAgo);
 };
 
 export const filterToday = (sessions: Session[] = []) => {
-  if (!Array.isArray(sessions)) return [];
+  const safeSessions = Array.isArray(sessions) ? sessions : [];
   const today = new Date().toLocaleDateString('en-CA'); 
-  return sessions.filter(s => s && s.date && s.date.startsWith(today));
+  return safeSessions.filter(s => s && s.date && s.date.startsWith(today));
 };
 
 export const calculateProStats = (sessions: Session[] = []) => {
-  const defaultStats = { eFG: "0.0", pps: "0.00", ftPct: "0.0", twoPct: "0.0", threePct: "0.0", totalPoints: 0 };
-  
-  if (!sessions || sessions.length === 0) return defaultStats;
+  const defaults = { eFG: "0.0", pps: "0.00", ftPct: "0.0", twoPct: "0.0", threePct: "0.0", totalPoints: 0 };
+  if (!Array.isArray(sessions) || sessions.length === 0) return defaults;
 
-  let acc = { made2p: 0, att2p: 0, made3p: 0, att3p: 0, madeFT: 0, attFT: 0, points: 0, attempts: 0 };
+  let acc = { m2: 0, a2: 0, m3: 0, a3: 0, mFT: 0, aFT: 0, pts: 0, att: 0 };
 
   sessions.forEach(s => {
     if (!s) return;
-    if (s.zoneType === '2p') { acc.made2p += s.made; acc.att2p += s.total; }
-    else if (s.zoneType === '3p') { acc.made3p += s.made; acc.att3p += s.total; }
-    else if (s.zoneType === 'tl') { acc.madeFT += s.made; acc.attFT += s.total; }
+    if (s.zoneType === '2p') { acc.m2 += s.made; acc.a2 += s.total; }
+    else if (s.zoneType === '3p') { acc.m3 += s.made; acc.a3 += s.total; }
+    else if (s.zoneType === 'tl') { acc.mFT += s.made; acc.aFT += s.total; }
   });
 
-  acc.points = (acc.made3p * 3) + (acc.made2p * 2) + (acc.madeFT * 1);
-  acc.attempts = acc.att2p + acc.att3p + acc.attFT;
+  acc.pts = (acc.m3 * 3) + (acc.m2 * 2) + (acc.mFT * 1);
+  acc.att = acc.a2 + acc.a3 + acc.aFT;
 
-  const fgAtt = acc.att2p + acc.att3p;
-  const eFG = fgAtt > 0 ? ((acc.made2p + (1.5 * acc.made3p)) / fgAtt) * 100 : 0;
-  const pps = acc.attempts > 0 ? acc.points / acc.attempts : 0;
+  const fgA = acc.a2 + acc.a3;
+  const eFG = fgA > 0 ? ((acc.m2 + (1.5 * acc.m3)) / fgA) * 100 : 0;
+  const pps = acc.att > 0 ? acc.pts / acc.att : 0;
 
   return {
     eFG: eFG.toFixed(1),
     pps: pps.toFixed(2),
-    ftPct: acc.attFT > 0 ? ((acc.madeFT / acc.attFT) * 100).toFixed(1) : "0.0",
-    twoPct: acc.att2p > 0 ? ((acc.made2p / acc.att2p) * 100).toFixed(1) : "0.0",
-    threePct: acc.att3p > 0 ? ((acc.made3p / acc.att3p) * 100).toFixed(1) : "0.0",
-    totalPoints: acc.points
+    ftPct: acc.aFT > 0 ? ((acc.mFT / acc.aFT) * 100).toFixed(1) : "0.0",
+    twoPct: acc.a2 > 0 ? ((acc.m2 / acc.a2) * 100).toFixed(1) : "0.0",
+    threePct: acc.a3 > 0 ? ((acc.m3 / acc.a3) * 100).toFixed(1) : "0.0",
+    totalPoints: acc.pts
   };
 };
