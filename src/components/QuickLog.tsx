@@ -1,5 +1,4 @@
 import { Session } from '../lib/sessions';
-import { formatDateLocal } from '../lib/stats';
 import { Settings, Trash2 } from 'lucide-react';
 
 interface QuickLogProps {
@@ -11,9 +10,10 @@ interface QuickLogProps {
 const QuickLog = ({ sessions, onEdit, onDelete }: QuickLogProps) => {
   return (
     <div className="bg-card rounded-3xl border border-border overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
+      {/* Contenedor con Scroll: Máximo 5 sesiones (aprox 320px) */}
+      <div className="max-h-[320px] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20">
         <table className="w-full text-sm text-left">
-          <thead className="bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground tracking-widest border-b border-border">
+          <thead className="bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground sticky top-0 z-10 border-b border-border">
             <tr>
               <th className="px-6 py-4">Fecha</th>
               <th className="px-6 py-4">Zona</th>
@@ -24,20 +24,17 @@ const QuickLog = ({ sessions, onEdit, onDelete }: QuickLogProps) => {
           </thead>
           <tbody className="divide-y divide-border">
             {sessions.map((session) => (
-              <tr key={session.id} className="hover:bg-muted/30 transition-colors group">
-                <td className="px-6 py-4 font-medium text-muted-foreground">
-                  {formatDateLocal(session.date)}
+              <tr key={session.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-6 py-4 opacity-70">
+                   {new Date(session.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                 </td>
-                <td className="px-6 py-4 font-bold">{session.zoneId.replace(/_/g, ' ')}</td>
-                <td className="px-6 py-4 font-mono text-xs opacity-70">{session.made}/{session.total}</td>
+                <td className="px-6 py-4 font-bold">{session.zoneId}</td>
+                <td className="px-6 py-4 font-mono text-xs opacity-60">{session.made}/{session.total}</td>
                 <td className="px-6 py-4 font-black text-primary">
                   {((session.made / session.total) * 100).toFixed(0)}%
                 </td>
                 <td className="px-6 py-4 text-right flex justify-end gap-2">
-                  <button onClick={() => onEdit(session)} className="p-2 hover:bg-primary/10 rounded-lg text-muted-foreground hover:text-primary transition-colors">
-                    <Settings className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => onDelete(session.id)} className="p-2 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
+                  <button onClick={() => onDelete(session.id)} className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </td>
