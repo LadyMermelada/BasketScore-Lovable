@@ -36,24 +36,27 @@ export const calculateProStats = (sessions: Session[]) => {
   stats.totalPoints = (stats.made3p * 3) + (stats.made2p * 2) + (stats.madeFT * 1);
   stats.totalAttempts = stats.att2p + stats.att3p + stats.attFT;
 
-  // eFG% = (FGM + 0.5 * 3PM) / FGA  (Excluye Tiros Libres)
   const fgAttempts = stats.att2p + stats.att3p;
+  
+  // Cálculos
   const eFG = fgAttempts > 0 
     ? ((stats.made2p + (1.5 * stats.made3p)) / fgAttempts) * 100 
     : 0;
 
-  // PPS = Puntos Totales / Intentos Totales
   const pps = stats.totalAttempts > 0 
     ? stats.totalPoints / stats.totalAttempts 
     : 0;
 
-  // FT% independiente
   const ftPct = stats.attFT > 0 ? (stats.madeFT / stats.attFT) * 100 : 0;
+  const twoPct = stats.att2p > 0 ? (stats.made2p / stats.att2p) * 100 : 0;
+  const threePct = stats.att3p > 0 ? (stats.made3p / stats.att3p) * 100 : 0;
 
   return {
     eFG: eFG.toFixed(1),
     pps: pps.toFixed(2),
     ftPct: ftPct.toFixed(1),
+    twoPct: twoPct.toFixed(1),
+    threePct: threePct.toFixed(1),
     totalPoints: stats.totalPoints
   };
 };
