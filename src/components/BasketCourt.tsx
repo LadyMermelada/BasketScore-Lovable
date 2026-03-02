@@ -10,26 +10,26 @@ interface BasketCourtProps {
 const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
   const zoneStats = useMemo(() => {
     const stats: Record<string, { made: number; total: number }> = {};
-    if (Array.isArray(sessions)) {
-      sessions.forEach(s => {
-        if (!s) return;
-        if (!stats[s.zoneId]) stats[s.zoneId] = { made: 0, total: 0 };
-        stats[s.zoneId].made += s.made;
-        stats[s.zoneId].total += s.total;
-      });
-    }
+    const safeSessions = Array.isArray(sessions) ? sessions : [];
+    
+    safeSessions.forEach(s => {
+      if (!s || !s.zoneId) return;
+      if (!stats[s.zoneId]) stats[s.zoneId] = { made: 0, total: 0 };
+      stats[s.zoneId].made += s.made;
+      stats[s.zoneId].total += s.total;
+    });
     return stats;
   }, [sessions]);
 
+  if (!ZONES) return <div className="text-white">Error cargando zonas</div>;
+
   return (
-    <div className="relative w-full aspect-[4/3] bg-[#020617] rounded-3xl border border-slate-800/50 overflow-hidden shadow-inner">
-      <svg viewBox="0 0 400 300" className="w-full h-full drop-shadow-2xl">
+    <div className="relative w-full aspect-[4/3] bg-[#020617] rounded-[2rem] border border-slate-800/50 overflow-hidden shadow-2xl">
+      <svg viewBox="0 0 400 300" className="w-full h-full">
         {ZONES.map((zone) => {
           const stats = zoneStats[zone.id];
           const pct = stats && stats.total > 0 ? (stats.made / stats.total) * 100 : 0;
-          
-          // Heatmap: Opacidad basada en acierto (mínimo 0.05 para que se vea el área vacía)
-          const fillOpacity = stats ? Math.max(pct / 100, 0.15) : 0.05;
+          const fillOpacity = stats ? Math.max(pct / 100, 0.2) : 0.05;
 
           return (
             <g key={zone.id} onClick={() => onZoneClick(zone.id)} className="cursor-pointer group">
@@ -49,7 +49,7 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
                   textAnchor="middle"
                   fill="white"
                   className="font-black pointer-events-none select-none"
-                  style={{ fontSize: '18px', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }}
+                  style={{ fontSize: '18px', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))' }}
                 >
                   {pct.toFixed(0)}%
                 </text>
