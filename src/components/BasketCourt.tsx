@@ -19,14 +19,13 @@ const BasketCourt = ({ sessions, onZoneClick }: BasketCourtProps) => {
   }, [sessions]);
 
   return (
-    <div className="relative w-full aspect-[4/3] bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+    <div className="relative w-full aspect-[4/3] bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
       <svg viewBox="0 0 400 300" className="w-full h-full">
         {ZONES.map((zone) => {
           const stats = zoneStats[zone.id];
           const pct = stats ? (stats.made / stats.total) * 100 : 0;
           
-          // Lógica de Color: Color base con Opacidad (Alpha) según porcentaje
-          // 100% = Ocupacidad Total (1) | 0% = Transparencia Total (0.1 para que se vea el borde)
+          // Color monocromo con opacidad variable según efectividad
           const fillOpacity = stats ? Math.max(pct / 100, 0.1) : 0.05;
 
           return (
@@ -37,7 +36,7 @@ const BasketCourt = ({ sessions, onZoneClick }: BasketCourtProps) => {
                 fillOpacity={fillOpacity}
                 stroke="#57ea9d"
                 strokeWidth="1"
-                className="transition-all duration-500 group-hover:stroke-2"
+                className="transition-all duration-300 group-hover:stroke-2"
               />
               {stats && (
                 <text
@@ -45,9 +44,8 @@ const BasketCourt = ({ sessions, onZoneClick }: BasketCourtProps) => {
                   y={zone.labelPos.y}
                   textAnchor="middle"
                   fill="white"
-                  // NÚMEROS EL DOBLE DE GRANDES (Antes 8-10px, ahora 18px)
-                  className="font-black pointer-events-none drop-shadow-md"
-                  style={{ fontSize: '18px' }} 
+                  className="font-black pointer-events-none drop-shadow-lg"
+                  style={{ fontSize: '18px' }} // Tamaño doble
                 >
                   {pct.toFixed(0)}%
                 </text>
