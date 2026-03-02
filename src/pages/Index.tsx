@@ -30,7 +30,7 @@ const Index = () => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [editSession, setEditSession] = useState<Session | null>(null);
 
-  // --- CÁLCULO DE ESTADÍSTICAS PROFESIONALES ---
+  // --- CÁLCULO DE ESTADÍSTICAS ---
   const stats = useMemo(() => {
     const today = calculateProStats(filterToday(sessions));
     const monthly = calculateProStats(filterLast30Days(sessions));
@@ -80,9 +80,7 @@ const Index = () => {
   }, [editSession, addSession, updateSession]);
 
   const handleDelete = useCallback((id: number | string) => {
-    if (confirm('¿Eliminar este registro de entrenamiento?')) {
-      deleteSession(id);
-    }
+    if (confirm('¿Eliminar registro?')) deleteSession(id);
   }, [deleteSession]);
 
   return (
@@ -99,64 +97,71 @@ const Index = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
             >
               <div className="mb-6">
                 {isGuest && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-xs font-bold text-primary mb-4 shadow-sm">
-                    🏀 MODO INVITADO: Tus datos se guardan solo en este dispositivo.
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-xs font-bold text-primary mb-4">
+                    🏀 MODO INVITADO
                   </div>
                 )}
                 <AppHeader sessions={sessions} onImport={importAll} />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-                {/* Visualización de la Cancha */}
                 <div className="bg-card rounded-3xl border border-border p-4 shadow-sm">
                   <BasketCourt sessions={sessions} onZoneClick={handleZoneClick} />
                 </div>
 
-                {/* Panel de Métricas Profesionales */}
+                {/* PANEL DE ESTADÍSTICAS REFORMADO */}
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-1 mb-1">
-                    Análisis de Eficiencia
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-1">
+                    Rendimiento (30 Días)
                   </h3>
                   
+                  {/* 1. PPS */}
                   <StatCard 
                     title="Puntos por Tiro (PPS)" 
-                    value={stats.today.pps} 
-                    subtitle={`Media 30d: ${stats.monthly.pps}`}
+                    value={stats.monthly.pps} 
+                    subtitle={`Hoy: ${stats.today.pps}`}
                     isHighlight 
                     delay={0.1} 
                   />
 
+                  {/* 2. eFG% */}
                   <StatCard 
                     title="eFG% (Eficiencia Real)" 
-                    value={stats.today.eFG} 
-                    subtitle={`Tendencia 30d: ${stats.monthly.eFG}%`}
+                    value={stats.monthly.eFG} 
+                    subtitle={`Hoy: ${stats.today.eFG}%`}
                     delay={0.15} 
                   />
 
+                  {/* 3. %3pts */}
                   <StatCard 
-                    title="Tiros Libres (FT%)" 
-                    value={stats.today.ftPct} 
-                    subtitle={`Media 30d: ${stats.monthly.ftPct}%`}
+                    title="% 3 Puntos" 
+                    value={stats.monthly.threePct} 
+                    subtitle={`Hoy: ${stats.today.threePct}%`}
                     delay={0.2} 
                   />
 
+                  {/* 4. %2pts */}
                   <StatCard 
-                    title="Puntos Totales Hoy" 
-                    value={stats.today.totalPoints} 
+                    title="% 2 Puntos" 
+                    value={stats.monthly.twoPct} 
+                    subtitle={`Hoy: ${stats.today.twoPct}%`}
                     delay={0.25} 
+                  />
+
+                  {/* 5. FT% */}
+                  <StatCard 
+                    title="Tiros Libres (FT%)" 
+                    value={stats.monthly.ftPct} 
+                    subtitle={`Hoy: ${stats.today.ftPct}%`}
+                    delay={0.3} 
                   />
                 </div>
               </div>
 
-              {/* Historial Reciente */}
               <div className="mt-8">
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <h3 className="font-bold text-lg">Sesiones Recientes</h3>
-                </div>
                 <QuickLog sessions={sessions} onEdit={handleEdit} onDelete={handleDelete} />
               </div>
             </motion.div>
