@@ -5,7 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 import { Session } from '../lib/sessions';
 import { calculateProStats } from '../lib/stats';
 import { Button } from '@/components/ui/button';
-import { LogOut, Trash2, AlertTriangle, User, ShieldAlert } from 'lucide-react';
+import { 
+  LogOut, Trash2, User, ShieldAlert, 
+  Target, Zap, Percent, Hash 
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProfileViewProps {
@@ -17,33 +20,35 @@ const ProfileView = ({ sessions }: ProfileViewProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Calculamos stats globales para el perfil
+  // Calculamos las estadísticas usando el motor profesional
   const stats = calculateProStats(sessions);
+
+  // Cálculos adicionales de volumen histórico
+  const totals = sessions.reduce((acc, s) => {
+    acc.made += s.made;
+    acc.total += s.total;
+    if (s.zoneType === '2p') { acc.made2p += s.made; acc.att2p += s.total; }
+    if (s.zoneType === '3p') { acc.made3p += s.made; acc.att3p += s.total; }
+    if (s.zoneType === 'tl') { acc.madeFT += s.made; acc.attFT += s.total; }
+    return acc;
+  }, { made: 0, total: 0, made2p: 0, att2p: 0, made3p: 0, att3p: 0, madeFT: 0, attFT: 0 });
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Error al cerrar sesión");
-    } else {
-      toast.success("Sesión cerrada correctamente");
-      window.location.reload(); // Recargamos para limpiar el estado de la app
-    }
+    if (error) toast.error("Error al cerrar sesión");
+    else window.location.reload();
   };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
       const { error } = await supabase.rpc('delete_user_account');
-      
       if (error) throw error;
-
-      toast.success("Tu cuenta ha sido eliminada permanentemente");
-      // Forzamos el cierre de sesión y limpieza
+      toast.success("Cuenta eliminada");
       await supabase.auth.signOut();
       window.location.reload();
-    } catch (error: any) {
-      console.error(error);
-      toast.error("No se pudo eliminar la cuenta. Inténtalo más tarde.");
+    } catch (err) {
+      toast.error("Error al eliminar cuenta");
       setShowDeleteConfirm(false);
     } finally {
       setIsDeleting(false);
@@ -51,71 +56,106 @@ const ProfileView = ({ sessions }: ProfileViewProps) => {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-10">
-      {/* HEADER DEL PERFIL */}
-      <div className="bg-card rounded-3xl p-8 border border-border shadow-sm text-center">
-        <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4 border-2 border-primary/20">
-          <User className="w-10 h-10 text-primary" />
+    <div className="space-y-6 max-w-2xl mx-auto pb-10 px-1">
+      
+      {/* 1. HEADER: INFO DE USUARIO */}
+      <div className="text-center py-4">
+        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-3 border border-primary/20">
+          <User className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold">{user?.email?.split('@')[0]}</h2>
-        <p className="text-muted-foreground text-sm">{user?.email}</p>
-        
-        <div className="grid grid-cols-3 gap-4 mt-8">
-          <div className="text-center">
-            <p className="text-2xl font-black text-primary">{stats.pps}</p>
-            <p className="text-[10px] uppercase font-bold text-muted-foreground">PPS Global</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-black text-primary">{stats.eFG}%</p>
-            <p className="text-[10px] uppercase font-bold text-muted-foreground">eFG% Total</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-black text-primary">{sessions.length}</p>
-            <p className="text-[10px] uppercase font-bold text-muted-foreground">Sesiones</p>
-          </div>
+        <h2 className="text-xl font-bold tracking-tight">{user?.email?.split('@')[0]}</h2>
+        <p className="text-muted-foreground text-xs">{user?.email}</p>
+      </div>
+
+      {/* 2. MÉTRICAS DE EFICIENCIA (LAS ESTRELLAS) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 text-center">
+          <div className="flex justify-center mb-1 text-primary"><Zap className="w-4 h-4" /></div>
+          <p className="text-2xl font-black text-primary">{stats.pps}</p>
+          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">PPS Global</p>
+        </div>
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 text-center">
+          <div className="flex justify-center mb-1 text-primary"><Target className="w-4 h-4" /></div>
+          <p className="text-2xl font-black text-primary">{stats.eFG}%</p>
+          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">eFG% Total</p>
         </div>
       </div>
 
-      {/* ACCIONES DE CUENTA */}
+      {/* 3. DESGLOSE HISTÓRICO PROFUNDO */}
       <div className="bg-card rounded-3xl border border-border overflow-hidden">
-        <div className="p-4 border-b border-border bg-muted/30">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Ajustes de Cuenta</h3>
+        <div className="p-4 border-b border-border flex items-center gap-2">
+          <Percent className="w-4 h-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-widest">Historial por Zonas</h3>
         </div>
         
-        <div className="p-2 space-y-1">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-muted transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-                <LogOut className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-bold text-sm">Cerrar Sesión</p>
-                <p className="text-xs text-muted-foreground">Salir de tu cuenta en este dispositivo</p>
-              </div>
+        <div className="divide-y divide-border">
+          {/* Fila 3 Puntos */}
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-bold text-sm">Tiros de 3</p>
+              <p className="text-[10px] text-muted-foreground font-mono">{totals.made3p} anotados / {totals.att3p} lanzados</p>
             </div>
-          </button>
+            <div className="text-right">
+              <p className="text-lg font-black text-foreground">{stats.threePct}%</p>
+            </div>
+          </div>
 
-          <button 
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-red-500/5 transition-colors text-left group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-bold text-sm text-red-500">Eliminar Cuenta</p>
-                <p className="text-xs text-muted-foreground">Borrar tus datos permanentemente</p>
-              </div>
+          {/* Fila 2 Puntos */}
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-bold text-sm">Tiros de 2</p>
+              <p className="text-[10px] text-muted-foreground font-mono">{totals.made2p} anotados / {totals.att2p} lanzados</p>
             </div>
-          </button>
+            <div className="text-right">
+              <p className="text-lg font-black text-foreground">{stats.twoPct}%</p>
+            </div>
+          </div>
+
+          {/* Fila Tiros Libres */}
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-bold text-sm">Tiros Libres</p>
+              <p className="text-[10px] text-muted-foreground font-mono">{totals.madeFT} anotados / {totals.attFT} lanzados</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-black text-foreground">{stats.ftPct}%</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Totales de volumen */}
+        <div className="p-4 bg-muted/30 grid grid-cols-2 gap-4 border-t border-border">
+          <div className="flex items-center gap-2">
+            <Hash className="w-4 h-4 text-muted-foreground" />
+            <p className="text-xs font-medium">Total Intentos: <span className="font-bold">{totals.total}</span></p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-muted-foreground" />
+            <p className="text-xs font-medium">Puntos Totales: <span className="font-bold">{stats.totalPoints}</span></p>
+          </div>
         </div>
       </div>
 
-      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+      {/* 4. AJUSTES DE CUENTA (COMPACTOS) */}
+      <div className="pt-4 flex flex-col gap-2">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-sm font-medium w-full"
+        >
+          <LogOut className="w-4 h-4 text-muted-foreground" />
+          Cerrar Sesión
+        </button>
+
+        <button 
+          onClick={() => setShowDeleteConfirm(true)}
+          className="flex items-center gap-2 px-4 py-3 rounded-xl hover:bg-red-500/10 transition-colors text-sm font-medium text-red-500/70 w-full"
+        >
+          <Trash2 className="w-4 h-4" />
+          Eliminar cuenta permanentemente
+        </button>
+      </div>
+
+      {/* MODAL DE CONFIRMACIÓN */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -123,33 +163,21 @@ const ProfileView = ({ sessions }: ProfileViewProps) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-card border-2 border-red-500/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+              className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl"
             >
-              <div className="mx-auto w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
-                <ShieldAlert className="w-8 h-8 text-red-500" />
+              <div className="mx-auto w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+                <ShieldAlert className="w-6 h-6 text-red-500" />
               </div>
-              
-              <h3 className="text-xl font-black mb-2">¿Estás 100% seguro?</h3>
-              <p className="text-muted-foreground text-sm mb-8">
-                Esta acción es <span className="text-red-500 font-bold uppercase tracking-tighter">irreversible</span>. Perderás todo tu historial de tiro y progreso.
+              <h3 className="text-lg font-bold mb-2">¿Confirmas la eliminación?</h3>
+              <p className="text-muted-foreground text-xs mb-6 px-4">
+                Esta acción borrará todos tus registros históricos y no se puede deshacer.
               </p>
-
-              <div className="flex flex-col gap-3">
-                <Button 
-                  variant="destructive" 
-                  className="font-bold h-12 text-md"
-                  onClick={handleDeleteAccount}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? 'Eliminando...' : 'SÍ, ELIMINAR CUENTA'}
+              <div className="flex flex-col gap-2">
+                <Button variant="destructive" className="font-bold" onClick={handleDeleteAccount} disabled={isDeleting}>
+                  {isDeleting ? 'Eliminando...' : 'SÍ, ELIMINAR TODO'}
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  className="font-bold"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={isDeleting}
-                >
-                  No, quiero pensarlo mejor
+                <Button variant="ghost" className="text-xs" onClick={() => setShowDeleteConfirm(false)}>
+                  CANCELAR
                 </Button>
               </div>
             </motion.div>
