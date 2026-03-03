@@ -7,17 +7,16 @@ interface BasketCourtProps {
   onZoneClick: (zoneId: string) => void;
 }
 
-const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
+const BasketCourt = ({ sessions, onZoneClick }: BasketCourtProps) => {
   const zoneStats = useMemo(() => {
     const stats: Record<string, { made: number; total: number }> = {};
-    const safeSessions = Array.isArray(sessions) ? sessions : [];
-    
-    safeSessions.forEach(s => {
-      if (!s || !s.zoneId) return;
-      if (!stats[s.zoneId]) stats[s.zoneId] = { made: 0, total: 0 };
-      stats[s.zoneId].made += s.made;
-      stats[s.zoneId].total += s.total;
-    });
+    if (sessions) {
+      sessions.forEach(s => {
+        if (!stats[s.zoneId]) stats[s.zoneId] = { made: 0, total: 0 };
+        stats[s.zoneId].made += s.made;
+        stats[s.zoneId].total += s.total;
+      });
+    }
     return stats;
   }, [sessions]);
 
@@ -28,9 +27,9 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
           const stats = zoneStats[zone.id];
           const pct = stats && stats.total > 0 ? (stats.made / stats.total) * 100 : 0;
           
-          // LÓGICA EXACTA QUE PEDISTE:
-          // Si hay tiros (stats), la opacidad es el % (ej: 50% = 0.5, 0% = 0).
-          // Si NO hay tiros en esa zona, opacidad base del 0.05 para ver el mapa.
+          // Lógica exacta: 
+          // Si tienes tiros, la transparencia es igual a tu % (0% = transparente, 100% = color sólido).
+          // Si no tienes tiros en esa zona, opacidad mínima (0.05) para que no desaparezca la forma.
           const fillOpacity = stats ? (pct / 100) : 0.05;
 
           return (
@@ -43,14 +42,15 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
                 strokeWidth="1"
                 className="transition-all duration-300 group-hover:stroke-2"
               />
-              {stats && (
+              {/* Añadimos zone.labelPos para evitar el crash del 'undefined (reading x)' */}
+              {stats && zone.labelPos && (
                 <text
-                  x={zone.labelPos?.x} // Usamos '?' para evitar el error de consola que tuviste antes
-                  y={zone.labelPos?.y}
+                  x={zone.labelPos.x}
+                  y={zone.labelPos.y}
                   textAnchor="middle"
                   fill="white"
                   className="font-black pointer-events-none drop-shadow-lg"
-                  style={{ fontSize: '18px' }} // Números el doble de grandes
+                  style={{ fontSize: '18px' }}
                 >
                   {pct.toFixed(0)}%
                 </text>
