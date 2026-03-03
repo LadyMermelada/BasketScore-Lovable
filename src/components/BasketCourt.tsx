@@ -8,7 +8,6 @@ interface Props {
   onZoneClick: (zoneId: string) => void;
 }
 
-// Tus coordenadas originales perfectas
 const ZONE_PATHS: Record<string, { d?: string; rect?: { x: number; y: number; w: number; h: number } }> = {
   Triple_Izq: { d: "M183.25,275.82v74.18H0v-164.96h71.82c24.9,42.18,64.34,74.74,111.43,90.78Z" },
   Triple_Der: { d: "M500,185.04v164.96h-183.25v-74.21c47.09-16.04,86.55-48.59,111.44-90.75h71.81Z" },
@@ -24,7 +23,6 @@ const ZONE_PATHS: Record<string, { d?: string; rect?: { x: number; y: number; w:
   Doble_Ala_Izq: { d: "M249.95,286.82c-75.88,0-142.16-40.86-178.13-101.78v-75h111.43v110.03c0,36.84,29.85,66.72,66.7,66.75Z" },
 };
 
-// Tus centros originales
 const ZONE_CENTERS: Record<string, { x: number; y: number }> = {
   Triple_Izq: { x: 85, y: 270 },
   Triple_Der: { x: 415, y: 270 },
@@ -50,7 +48,7 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
         const total = zSessions.reduce((a, b) => a + (b.total || 0), 0);
         stats[z.id] = total > 0 ? (made / total) * 100 : 0;
       } else {
-        stats[z.id] = -1; // -1 significa que no hay tiros registrados
+        stats[z.id] = -1;
       }
     });
     return stats;
@@ -66,9 +64,7 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
           
           if (!path) return null;
 
-          // LÓGICA MONOCROMÁTICA:
-          // Transparente si no hay tiros. Si los hay, brilla en base al porcentaje.
-          const fillOpacity = pct === -1 ? 0 : Math.max(pct / 100, 0.1);
+          const fillOpacity = pct === -1 ? 0 : Math.max(pct / 100, 0.15);
 
           return (
             <motion.g
@@ -83,11 +79,11 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
               {path.d ? (
                 <path
                   d={path.d}
-                  fill="#57ea9d"
+                  fill="hsl(var(--primary))"
                   fillOpacity={fillOpacity}
-                  stroke="#57ea9d"
+                  stroke="hsl(var(--primary))"
                   strokeWidth="1.2"
-                  strokeOpacity="0.4" // Línea base siempre visible
+                  strokeOpacity="0.4"
                   className="transition-all duration-300 group-hover:stroke-white group-hover:stroke-opacity-80 group-hover:stroke-[1.5px]"
                 />
               ) : path.rect ? (
@@ -96,16 +92,15 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
                   y={path.rect.y}
                   width={path.rect.w}
                   height={path.rect.h}
-                  fill="#57ea9d"
+                  fill="hsl(var(--primary))"
                   fillOpacity={fillOpacity}
-                  stroke="#57ea9d"
+                  stroke="hsl(var(--primary))"
                   strokeWidth="1.2"
-                  strokeOpacity="0.4" // Línea base siempre visible
+                  strokeOpacity="0.4"
                   className="transition-all duration-300 group-hover:stroke-white group-hover:stroke-opacity-80 group-hover:stroke-[1.5px]"
                 />
               ) : null}
               
-              {/* Mostramos el porcentaje solo si pct no es -1 (es decir, si hay tiros) */}
               {center && pct >= 0 && (
                 <text
                   x={center.x}
@@ -113,8 +108,12 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill="white"
-                  className="pointer-events-none select-none font-black"
-                  style={{ fontSize: '13px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
+                  className="pointer-events-none select-none font-mono font-bold"
+                  style={{ 
+                    fontSize: '13px', 
+                    fontFamily: "'JetBrains Mono', monospace", 
+                    textShadow: '0 2px 4px rgba(0,0,0,0.8)' 
+                  }}
                 >
                   {pct.toFixed(0)}%
                 </text>
