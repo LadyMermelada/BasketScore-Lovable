@@ -8,9 +8,7 @@ interface BasketCourtProps {
 }
 
 const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
-  if (!ZONES || ZONES.length === 0) {
-    return <div className="text-[#57ea9d] p-10 font-bold border border-slate-800 rounded-2xl">Zonas no cargadas</div>;
-  }
+  if (!ZONES || ZONES.length === 0) return null;
 
   const zoneStats = useMemo(() => {
     const stats: Record<string, { made: number; total: number }> = {};
@@ -26,7 +24,7 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
   }, [sessions]);
 
   return (
-    <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-[#020617] rounded-[2rem] overflow-hidden border border-slate-800/30">
+    <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-[#020617] rounded-[2rem] overflow-hidden">
       <svg 
         viewBox="0 0 400 300" 
         className="w-full h-full max-h-[450px]"
@@ -34,9 +32,11 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
       >
         {ZONES.map((zone) => {
           const stats = zoneStats[zone.id];
-          const pct = stats && stats.total > 0 ? (stats.made / stats.total) * 100 : 0;
+          const hasData = stats && stats.total > 0;
+          const pct = hasData ? (stats.made / stats.total) * 100 : 0;
           
-          const fillOpacity = stats ? Math.max(pct / 100, 0.2) : 0.08;
+          // EL RELLENO: Si no hay datos, transparencia total (0). Si hay, opacidad según %
+          const fillOpacity = hasData ? Math.max(pct / 100, 0.1) : 0;
 
           return (
             <g key={zone.id} onClick={() => onZoneClick(zone.id)} className="cursor-pointer group">
@@ -44,14 +44,14 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
                 d={zone.path}
                 fill="#57ea9d"
                 fillOpacity={fillOpacity}
-                stroke="#57ea9d"
-                strokeWidth="1.2"
-                strokeOpacity="0.3"
+                stroke="#57ea9d" // LAS LÍNEAS DE LA CANCHA (Siempre visibles)
+                strokeWidth="1.5"
+                strokeOpacity="0.4" // Siempre al 40% de brillo para dibujar la pista
                 className="transition-all duration-300 group-hover:stroke-white group-hover:stroke-2"
               />
               
-              {/* LA PROTECCIÓN: Solo dibujamos el texto si 'labelPos' y 'x' existen realmente */}
-              {stats && stats.total > 0 && zone.labelPos && zone.labelPos.x !== undefined && zone.labelPos.y !== undefined && (
+              {/* Solo mostramos número si hay datos y si las coordenadas X/Y existen */}
+              {hasData && zone.labelPos?.x !== undefined && zone.labelPos?.y !== undefined && (
                 <text
                   x={zone.labelPos.x}
                   y={zone.labelPos.y}
