@@ -81,7 +81,7 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      <ShotModal open={modalOpen} onClose={() => setModalOpen(false)} zoneId={selectedZone} onSave={(d) => {
+      <ShotModal open={modalOpen} onClose={() => setModalOpen(false)} zoneId={selectedZone} editSession={null} onSave={(d) => {
           const zone = ZONES?.find(z => z.id === d.zoneId);
           addSession({...d, zoneType: (zone?.type || '2p') as any, zoneLabel: zone?.label || d.zoneId});
           setModalOpen(false);
