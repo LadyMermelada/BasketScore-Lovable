@@ -8,11 +8,6 @@ interface BasketCourtProps {
 }
 
 const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
-  // Verificación de emergencia: Si ZONES no carga, mostramos aviso
-  if (!ZONES || ZONES.length === 0) {
-    return <div className="text-primary p-10 font-bold">Error: No se detectan las zonas de la cancha.</div>;
-  }
-
   const zoneStats = useMemo(() => {
     const stats: Record<string, { made: number; total: number }> = {};
     const safeSessions = Array.isArray(sessions) ? sessions : [];
@@ -26,19 +21,23 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
     return stats;
   }, [sessions]);
 
+  if (!ZONES) return null;
+
   return (
-    <div className="w-full h-full flex items-center justify-center bg-[#020617] rounded-[2rem] overflow-hidden">
+    <div className="w-full h-full min-h-[350px] flex items-center justify-center bg-[#020617] rounded-[2rem] overflow-hidden border border-slate-800/50 shadow-2xl">
       <svg 
         viewBox="0 0 400 300" 
+        className="w-full h-full"
         preserveAspectRatio="xMidYMid meet"
-        className="w-full h-auto max-h-full"
       >
         {ZONES.map((zone) => {
-          const stats = zoneStats[zone.id];
-          const pct = stats && stats.total > 0 ? (stats.made / stats.total) * 100 : 0;
+          // Si no hay stats, forzamos valores a 0 para que no sea undefined
+          const stats = zoneStats[zone.id] || { made: 0, total: 0 };
+          const pct = stats.total > 0 ? (stats.made / stats.total) * 100 : 0;
           
-          // Heatmap: Color cian con opacidad según éxito (mínimo 10% para ver la zona)
-          const fillOpacity = stats ? Math.max(pct / 100, 0.2) : 0.08;
+          // LA CLAVE: Opacidad mínima de 0.2 (20%) para que la cancha SIEMPRE se vea.
+          // Si hay tiros, sube hasta 1.0 (100%).
+          const fillOpacity = stats.total > 0 ? Math.max(pct / 100, 0.3) : 0.2;
 
           return (
             <g key={zone.id} onClick={() => onZoneClick(zone.id)} className="cursor-pointer group">
@@ -48,21 +47,20 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
                 fillOpacity={fillOpacity}
                 stroke="#57ea9d"
                 strokeWidth="1.5"
-                strokeOpacity="0.3"
-                className="transition-all duration-300 group-hover:stroke-white group-hover:stroke-2"
+                strokeOpacity="0.5"
+                className="transition-all duration-300 group-hover:fillOpacity-50 group-hover:stroke-white group-hover:stroke-2"
               />
-              {stats && stats.total > 0 && (
-                <text
-                  x={zone.labelPos.x}
-                  y={zone.labelPos.y}
-                  textAnchor="middle"
-                  fill="white"
-                  className="font-black pointer-events-none select-none"
-                  style={{ fontSize: '18px', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))' }}
-                >
-                  {pct.toFixed(0)}%
-                </text>
-              )}
+              {/* SIEMPRE mostramos el texto, incluso si es 0% */}
+              <text
+                x={zone.labelPos.x}
+                y={zone.labelPos.y}
+                textAnchor="middle"
+                fill="white"
+                className="font-black pointer-events-none select-none transition-all duration-300 group-hover:fill-[#57ea9d]"
+                style={{ fontSize: '18px', filter: 'drop-shadow(0px 3px 6px rgba(0,0,0,0.9))' }}
+              >
+                {pct.toFixed(0)}%
+              </text>
             </g>
           );
         })}
