@@ -121,7 +121,7 @@ const Index = () => {
           setModalOpen(false);
         }}
       />
-      <BottomNav active={activeTab} onChange={(t: any) => setActiveTab(t)} />
+<BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   );
 };
