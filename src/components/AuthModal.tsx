@@ -62,7 +62,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
           exit={{ opacity: 0, scale: 0.95 }}
           className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
         >
-          <div className="h-1.5 bg-gradient-to-r from-primary to-blue-600" />
+          <div className="h-1 bg-primary" />
           
           <button onClick={onClose} className="absolute right-4 top-4 p-1 rounded-full hover:bg-muted transition-colors">
             <X className="w-5 h-5" />
