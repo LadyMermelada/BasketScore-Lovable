@@ -8,8 +8,6 @@ interface BasketCourtProps {
 }
 
 const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
-  if (!ZONES || ZONES.length === 0) return null;
-
   const zoneStats = useMemo(() => {
     const stats: Record<string, { made: number; total: number }> = {};
     const safeSessions = Array.isArray(sessions) ? sessions : [];
@@ -24,19 +22,16 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
   }, [sessions]);
 
   return (
-    <div className="w-full h-full min-h-[300px] flex items-center justify-center bg-[#020617] rounded-[2rem] overflow-hidden">
-      <svg 
-        viewBox="0 0 400 300" 
-        className="w-full h-full max-h-[450px]"
-        preserveAspectRatio="xMidYMid meet"
-      >
+    <div className="relative w-full aspect-[4/3] bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+      <svg viewBox="0 0 400 300" className="w-full h-full">
         {ZONES.map((zone) => {
           const stats = zoneStats[zone.id];
-          const hasData = stats && stats.total > 0;
-          const pct = hasData ? (stats.made / stats.total) * 100 : 0;
+          const pct = stats && stats.total > 0 ? (stats.made / stats.total) * 100 : 0;
           
-          // EL RELLENO: Si no hay datos, transparencia total (0). Si hay, opacidad según %
-          const fillOpacity = hasData ? Math.max(pct / 100, 0.1) : 0;
+          // LÓGICA EXACTA QUE PEDISTE:
+          // Si hay tiros (stats), la opacidad es el % (ej: 50% = 0.5, 0% = 0).
+          // Si NO hay tiros en esa zona, opacidad base del 0.05 para ver el mapa.
+          const fillOpacity = stats ? (pct / 100) : 0.05;
 
           return (
             <g key={zone.id} onClick={() => onZoneClick(zone.id)} className="cursor-pointer group">
@@ -44,21 +39,18 @@ const BasketCourt = ({ sessions = [], onZoneClick }: BasketCourtProps) => {
                 d={zone.path}
                 fill="#57ea9d"
                 fillOpacity={fillOpacity}
-                stroke="#57ea9d" // LAS LÍNEAS DE LA CANCHA (Siempre visibles)
-                strokeWidth="1.5"
-                strokeOpacity="0.4" // Siempre al 40% de brillo para dibujar la pista
-                className="transition-all duration-300 group-hover:stroke-white group-hover:stroke-2"
+                stroke="#57ea9d"
+                strokeWidth="1"
+                className="transition-all duration-300 group-hover:stroke-2"
               />
-              
-              {/* Solo mostramos número si hay datos y si las coordenadas X/Y existen */}
-              {hasData && zone.labelPos?.x !== undefined && zone.labelPos?.y !== undefined && (
+              {stats && (
                 <text
-                  x={zone.labelPos.x}
-                  y={zone.labelPos.y}
+                  x={zone.labelPos?.x} // Usamos '?' para evitar el error de consola que tuviste antes
+                  y={zone.labelPos?.y}
                   textAnchor="middle"
                   fill="white"
-                  className="font-black pointer-events-none select-none"
-                  style={{ fontSize: '18px', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))' }}
+                  className="font-black pointer-events-none drop-shadow-lg"
+                  style={{ fontSize: '18px' }} // Números el doble de grandes
                 >
                   {pct.toFixed(0)}%
                 </text>
