@@ -17,13 +17,17 @@ import ClubView from '../components/ClubView';
 import AuthModal from '../components/AuthModal';
 
 const Index = () => {
-  const { sessions = [], addSession, deleteSession, importAll } = useSessions();
+  // Asegúrate de sacar updateSession del hook
+  const { sessions = [], addSession, updateSession, deleteSession, importAll } = useSessions();
   const { isGuest } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'cancha' | 'club' | 'perfil'>('cancha');
   const [modalOpen, setModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  
+  // EL ESTADO QUE FALTABA PARA EDITAR
+  const [editSession, setEditSession] = useState<any | null>(null);
 
   const stats = useMemo(() => ({
     today: calculateProStats(filterToday(sessions)),
@@ -37,6 +41,37 @@ const Index = () => {
     }
     setActiveTab(tab);
   }, [isGuest]);
+
+  // Al clickar en una zona, nos aseguramos de limpiar cualquier sesión en edición
+  const handleZoneClick = useCallback((zoneId: string) => {
+    setSelectedZone(zoneId);
+    setEditSession(null); 
+    setModalOpen(true);
+  }, []);
+
+  // FUNCIÓN RESTAURADA: Abrir el modal con los datos del tiro a editar
+  const handleEdit = useCallback((session: any) => {
+    setSelectedZone(session.zoneId);
+    setEditSession(session);
+    setModalOpen(true);
+  }, []);
+
+  // FUNCIÓN RESTAURADA: Diferencia entre añadir un tiro nuevo o modificar uno existente
+  const handleSave = useCallback((data: any) => {
+    const zone = ZONES?.find(z => z.id === data.zoneId);
+    const sessionData = {
+      ...data,
+      zoneType: (zone?.type || '2p') as any,
+      zoneLabel: zone?.label || data.zoneId
+    };
+
+    if (editSession) {
+      updateSession(editSession.id, sessionData);
+    } else {
+      addSession(sessionData);
+    }
+    setModalOpen(false);
+  }, [editSession, addSession, updateSession]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -58,7 +93,8 @@ const Index = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
                 <div className="bg-card rounded-3xl border border-border p-4 shadow-sm">
-                  <BasketCourt sessions={sessions} onZoneClick={(id) => { setSelectedZone(id); setModalOpen(true); }} />
+                  {/* Pasamos handleZoneClick actualizado */}
+                  <BasketCourt sessions={sessions} onZoneClick={handleZoneClick} />
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -71,7 +107,8 @@ const Index = () => {
               </div>
 
               <div className="mt-8">
-                <QuickLog sessions={sessions} onEdit={()=>{}} onDelete={deleteSession} />
+                {/* Le pasamos handleEdit para que vuelva a funcionar el botón de edición */}
+                <QuickLog sessions={sessions} onEdit={handleEdit} onDelete={deleteSession} />
               </div>
             </motion.div>
           )}
@@ -81,11 +118,13 @@ const Index = () => {
         </AnimatePresence>
       </div>
 
-      <ShotModal open={modalOpen} onClose={() => setModalOpen(false)} zoneId={selectedZone} editSession={null} onSave={(d) => {
-          const zone = ZONES?.find(z => z.id === d.zoneId);
-          addSession({...d, zoneType: (zone?.type || '2p') as any, zoneLabel: zone?.label || d.zoneId});
-          setModalOpen(false);
-      }} />
+      <ShotModal 
+        open={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        zoneId={selectedZone} 
+        editSession={editSession} 
+        onSave={handleSave} 
+      />
 
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
