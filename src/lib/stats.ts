@@ -1,10 +1,5 @@
 import { Session } from './sessions';
 
-export const formatDateLocal = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
-};
-
 export const filterLast30Days = (sessions: Session[]) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -12,7 +7,7 @@ export const filterLast30Days = (sessions: Session[]) => {
 };
 
 export const filterToday = (sessions: Session[]) => {
-  const today = new Date().toLocaleDateString('en-CA'); 
+  const today = new Date().toISOString().split('T')[0];
   return sessions.filter(s => s.date.startsWith(today));
 };
 
