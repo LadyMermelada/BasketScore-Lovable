@@ -5,8 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Define la ruta base para que los archivos se encuentren en GitHub Pages
-  base: "/BasketScore-Lovable/", 
+  base: process.env.GITHUB_ACTIONS ? "/BasketScore-Lovable/" : "/",
   server: {
     host: "::",
     port: 8080,

@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Toaster } from '@/components/ui/sonner';
 import { useSessions } from '../hooks/useSessions';
 import { useAuth } from '../hooks/useAuth';
+import { useThemeColor } from '../hooks/useThemeColor';
 import { ZONES } from '../lib/zones';
 import { calculateProStats, filterToday, filterLast30Days } from '../lib/stats';
 import { supabase } from '../lib/supabase';
@@ -18,8 +18,9 @@ import ClubView from '../components/ClubView';
 import AuthModal from '../components/AuthModal';
 
 const Index = () => {
-  const { sessions = [], addSession, updateSession, deleteSession, importAll, loading } = useSessions();
+  const { sessions = [], addSession, deleteSession, importAll, loading } = useSessions();
   const { isGuest, user } = useAuth();
+  const themeColor = useThemeColor();
   
   const [activeTab, setActiveTab] = useState<'cancha' | 'club' | 'perfil'>('cancha');
   const [modalOpen, setModalOpen] = useState(false);
@@ -69,17 +70,13 @@ const Index = () => {
       ...data,
       zoneType: (zone?.type || '2p') as any,
       zoneLabel: zone?.label || data.zoneId,
-      note: data.note // Aseguramos que se guarde la nota
+      note: data.note
     };
 
-    if (editSession) {
-      updateSession(editSession.id, sessionData);
-    } else {
-      addSession(sessionData);
-    }
+    addSession(sessionData);
     setModalOpen(false);
     setEditSession(null);
-  }, [editSession, addSession, updateSession]);
+  }, [addSession]);
 
   if (loading && sessions.length === 0 && !isGuest) {
     return (
@@ -92,7 +89,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <Toaster position="top-center" theme="dark" />
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       <div className="p-4 max-w-7xl mx-auto">
@@ -141,7 +137,7 @@ const Index = () => {
           
           {activeTab === 'perfil' && (
             <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <ProfileView sessions={sessions} />
+              <ProfileView sessions={sessions} themeColor={themeColor} />
             </motion.div>
           )}
         </AnimatePresence>

@@ -58,10 +58,10 @@ export default function StatCard({
       transition={{ delay, duration: 0.3 }}
     >
       <div className="flex items-center justify-between mb-1 relative z-10">
-        <span className="text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className="text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">
           {title}
         </span>
-        <span className={`font-mono text-lg font-bold ${isHighlight ? 'text-primary stat-glow' : 'text-foreground'}`}>
+        <span className={`font-mono text-xl font-bold ${isHighlight ? 'text-primary stat-glow' : 'text-foreground'}`}>
           {value === "0.00" || value === "0.0" || value === 0 ? "—" : value}
           {title.includes('%') && value !== "0.0" && value !== 0 && <span className="text-xs ml-0.5 opacity-70">%</span>}
         </span>
@@ -92,7 +92,7 @@ export default function StatCard({
       )}
 
       {subtitle && (
-        <p className="text-[10px] text-muted-foreground mt-1 font-medium italic relative z-10">
+        <p className="text-[0.6rem] text-muted-foreground mt-1 font-bold italic relative z-10">
           {subtitle}
         </p>
       )}
