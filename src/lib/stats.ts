@@ -1,5 +1,11 @@
 import { Session } from './sessions';
 
+// Esta función es necesaria para que QuickLog.tsx no de error de compilación
+export const formatDateLocal = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+};
+
 export const filterLast30Days = (sessions: Session[]) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
