@@ -20,7 +20,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   if (!isOpen) return null;
 
   // Calculamos la URL de redirección dinámicamente según dónde estemos
-  const redirectUrl = window.location.origin + '/BasketScore-Lovable/';
+  const redirectUrl = window.location.origin + import.meta.env.BASE_URL;
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
