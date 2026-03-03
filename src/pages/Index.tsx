@@ -17,7 +17,7 @@ import ClubView from '../components/ClubView';
 import AuthModal from '../components/AuthModal';
 
 const Index = () => {
-  const { sessions, addSession, deleteSession, importAll } = useSessions();
+  const { sessions = [], addSession, deleteSession, importAll } = useSessions();
   const { isGuest } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'cancha' | 'club' | 'perfil'>('cancha');
@@ -26,8 +26,8 @@ const Index = () => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   const stats = useMemo(() => ({
-    today: calculateProStats(filterToday(sessions || [])),
-    monthly: calculateProStats(filterLast30Days(sessions || []))
+    today: calculateProStats(filterToday(sessions)),
+    monthly: calculateProStats(filterLast30Days(sessions))
   }), [sessions]);
 
   const handleTabChange = useCallback((tab: any) => {
@@ -38,70 +38,54 @@ const Index = () => {
     setActiveTab(tab);
   }, [isGuest]);
 
-  const handleZoneClick = (zoneId: string) => {
-    setSelectedZone(zoneId);
-    setModalOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-background pb-24">
-      <Toaster position="top-center" />
+      <Toaster position="top-center" theme="dark" />
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
       <div className="p-4 max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           {activeTab === 'cancha' && (
-            <motion.div key="cancha" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <motion.div key="cancha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="mb-6">
                 {isGuest && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-xs font-bold text-primary mb-4 shadow-sm">
-                    🏀 MODO INVITADO: Tus datos se guardan solo en este dispositivo.
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-[10px] font-black text-primary mb-4 tracking-widest uppercase">
+                    🏀 MODO INVITADO
                   </div>
                 )}
-                <AppHeader sessions={sessions || []} onImport={importAll} />
+                <AppHeader sessions={sessions} onImport={importAll} />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 max-w-5xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
                 <div className="bg-card rounded-3xl border border-border p-4 shadow-sm">
-                  <BasketCourt sessions={sessions || []} onZoneClick={handleZoneClick} />
+                  <BasketCourt sessions={sessions} onZoneClick={(id) => { setSelectedZone(id); setModalOpen(true); }} />
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-1 mb-1">
-                    Análisis de Eficiencia
-                  </h3>
-                  <StatCard title="PPS (30d)" sessions={sessions || []} zoneType="global" metric="pps" value={stats.monthly.pps} subtitle={`Hoy: ${stats.today.pps} PPS`} isHighlight delay={0.1} />
-                  <StatCard title="eFG% (30d)" sessions={sessions || []} zoneType="global" metric="efg" value={stats.monthly.eFG} subtitle={`Hoy: ${stats.today.eFG}%`} delay={0.15} />
-                  <StatCard title="Tiros Libres" sessions={sessions || []} zoneType="tl" value={stats.monthly.ftPct} subtitle={`Hoy: ${stats.today.ftPct}%`} delay={0.2} />
-                  <StatCard title="2 Puntos" sessions={sessions || []} zoneType="2p" value={stats.monthly.twoPct} subtitle={`Hoy: ${stats.today.twoPct}%`} delay={0.25} />
-                  <StatCard title="3 Puntos" sessions={sessions || []} zoneType="3p" value={stats.monthly.threePct} subtitle={`Hoy: ${stats.today.threePct}%`} delay={0.3} />
+                  <StatCard title="PPS (30d)" sessions={sessions} zoneType="global" metric="pps" value={stats.monthly.pps} subtitle={`Hoy: ${stats.today.pps}`} isHighlight delay={0.1} />
+                  <StatCard title="eFG% (30d)" sessions={sessions} zoneType="global" metric="efg" value={stats.monthly.eFG} subtitle={`Hoy: ${stats.today.eFG}%`} delay={0.15} />
+                  <StatCard title="Tiros Libres" sessions={sessions} zoneType="tl" value={stats.monthly.ftPct} delay={0.2} />
+                  <StatCard title="2 Puntos" sessions={sessions} zoneType="2p" value={stats.monthly.twoPct} delay={0.25} />
+                  <StatCard title="3 Puntos" sessions={sessions} zoneType="3p" value={stats.monthly.threePct} delay={0.3} />
                 </div>
               </div>
 
-              <div className="mt-8 max-w-5xl mx-auto">
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <h3 className="font-bold text-lg">Sesiones Recientes</h3>
-                </div>
-                <QuickLog sessions={sessions || []} onEdit={()=>{}} onDelete={deleteSession} />
+              <div className="mt-8">
+                <QuickLog sessions={sessions} onEdit={()=>{}} onDelete={deleteSession} />
               </div>
             </motion.div>
           )}
 
-          {activeTab === 'club' && !isGuest && (
-            <motion.div key="club" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ClubView />
-            </motion.div>
-          )}
-
-          {activeTab === 'perfil' && !isGuest && (
-            <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ProfileView sessions={sessions || []} />
-            </motion.div>
-          )}
+          {activeTab === 'club' && <motion.div key="club" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><ClubView /></motion.div>}
+          {activeTab === 'perfil' && <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><ProfileView sessions={sessions} /></motion.div>}
         </AnimatePresence>
       </div>
 
-      <ShotModal open={modalOpen} onClose={() => setModalOpen(false)} zoneId={selectedZone} onSave={(d) => addSession({...d, zoneType: '2p', zoneLabel: d.zoneId})} />
+      <ShotModal open={modalOpen} onClose={() => setModalOpen(false)} zoneId={selectedZone} onSave={(d) => {
+          const zone = ZONES?.find(z => z.id === d.zoneId);
+          addSession({...d, zoneType: (zone?.type || '2p') as any, zoneLabel: zone?.label || d.zoneId});
+          setModalOpen(false);
+      }} />
 
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
