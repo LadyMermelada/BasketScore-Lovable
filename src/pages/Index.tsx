@@ -27,7 +27,6 @@ const Index = () => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [editSession, setEditSession] = useState<any | null>(null);
 
-  // Limpieza de sesión si el usuario no existe en DB
   useEffect(() => {
     const checkSession = async () => {
       if (user && !user.email) {
@@ -69,7 +68,8 @@ const Index = () => {
     const sessionData = {
       ...data,
       zoneType: (zone?.type || '2p') as any,
-      zoneLabel: zone?.label || data.zoneId
+      zoneLabel: zone?.label || data.zoneId,
+      note: data.note // Aseguramos que se guarde la nota
     };
 
     if (editSession) {
