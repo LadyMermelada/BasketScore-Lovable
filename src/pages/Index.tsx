@@ -5,7 +5,7 @@ import { useSessions } from '../hooks/useSessions';
 import { useAuth } from '../hooks/useAuth'; 
 import { ZONES } from '../lib/zones';
 import { calculateProStats, filterToday, filterLast30Days } from '../lib/stats';
-import { supabase } from '../lib/supabase'; // Importante para el limbo
+import { supabase } from '../lib/supabase'; // Asegúrate de importar esto
 
 import AppHeader from '../components/AppHeader';
 import BasketCourt from '../components/BasketCourt';
@@ -26,18 +26,16 @@ const Index = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
-  // EFECTO ANTI-LIMBO: Si el usuario no existe en la DB pero hay sesión, cerramos
+  // AUTO-REPARACIÓN DE SESIÓN (Cura para el Limbo)
   useEffect(() => {
-    const checkSession = async () => {
-      if (user) {
-        const { data } = await supabase.auth.getUser();
-        if (!data.user) {
-           localStorage.clear();
-           window.location.reload();
-        }
+    const healSession = async () => {
+      if (user && !user.email) {
+        // Si hay usuario pero no hay email, la sesión está corrupta. La matamos.
+        await supabase.auth.signOut();
+        window.location.reload();
       }
     };
-    checkSession();
+    healSession();
   }, [user]);
 
   const stats = useMemo(() => {
@@ -48,17 +46,26 @@ const Index = () => {
     };
   }, [sessions]);
 
-  if (loading && sessions.length === 0) {
+  const handleTabChange = useCallback((tab: 'cancha' | 'club' | 'perfil') => {
+    if (tab !== 'cancha' && isGuest) {
+      setAuthModalOpen(true);
+      return;
+    }
+    setActiveTab(tab);
+  }, [isGuest]);
+
+  // Pantalla de carga más suave para que no parezca un error
+  if (loading && sessions.length === 0 && !isGuest) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-primary font-black text-[10px] tracking-widest uppercase animate-pulse">Sincronizando...</p>
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-[#57ea9d] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-[#57ea9d] font-black tracking-[0.2em] animate-pulse uppercase text-xs">Conectando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-[#020617] text-white pb-24 selection:bg-[#57ea9d]/30">
       <Toaster position="top-center" theme="dark" />
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
 
@@ -68,7 +75,7 @@ const Index = () => {
             <motion.div key="cancha" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="mb-6">
                 {isGuest && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-[10px] font-black text-primary mb-4 tracking-widest uppercase shadow-sm">
+                  <div className="bg-[#57ea9d]/10 border border-[#57ea9d]/20 rounded-xl p-3 text-center text-[10px] font-black text-[#57ea9d] mb-4 tracking-widest uppercase">
                     🏀 MODO INVITADO
                   </div>
                 )}
@@ -76,8 +83,8 @@ const Index = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-                {/* Contenedor con altura mínima forzada para la cancha */}
-                <div className="bg-card rounded-[2rem] border border-border p-4 shadow-sm min-h-[350px] md:h-[450px] flex items-center justify-center relative">
+                {/* Contenedor seguro para la cancha */}
+                <div className="bg-slate-900/50 rounded-[2rem] border border-slate-800 p-4 shadow-sm min-h-[350px] flex items-center justify-center">
                   <BasketCourt 
                     sessions={sessions} 
                     onZoneClick={(id) => { setSelectedZone(id); setModalOpen(true); }} 
