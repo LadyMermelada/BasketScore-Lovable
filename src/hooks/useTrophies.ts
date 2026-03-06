@@ -10,14 +10,12 @@ export interface TrophyResult {
 }
 
 export function useTrophies(sessions: Session[]) {
-  const [newlyUnlocked, setNewlyUnlocked] = useState<TrophyDef | null>(null);
-  const prevUnlockedRef = useRef<Set<string>>(new Set());
-  const initialized = useRef(false);
+  const [unlockQueue, setUnlockQueue] = useState<TrophyDef[]>([]);
+  const [replayedTrophy, setReplayedTrophy] = useState<TrophyDef | null>(null);
 
   const results: TrophyResult[] = useMemo(() => {
-    const evaluated = TROPHIES.map(trophy => {
+    return TROPHIES.map(trophy => {
       if (trophy.id === 'goat') {
-        // Special: count other unlocked trophies
         const otherUnlocked = TROPHIES.filter(t => t.id !== 'goat').filter(t => t.evaluate(sessions).unlocked).length;
         return {
           trophy,
@@ -26,39 +24,62 @@ export function useTrophies(sessions: Session[]) {
           current: otherUnlocked,
         };
       }
-      const result = trophy.evaluate(sessions);
-      return { trophy, ...result };
+      return { trophy, ...trophy.evaluate(sessions) };
     });
-    return evaluated;
   }, [sessions]);
 
-  // Detect newly unlocked trophies
+  // Persistencia y sistema de Cola (Queue)
   useEffect(() => {
-    const currentUnlocked = new Set(results.filter(r => r.unlocked).map(r => r.trophy.id));
+    if (!sessions || sessions.length === 0) return;
+
+    const unlockedIds = results.filter(r => r.unlocked).map(r => r.trophy.id);
+    const stored = localStorage.getItem('notified_trophies');
     
-    if (initialized.current) {
-      for (const id of currentUnlocked) {
-        if (!prevUnlockedRef.current.has(id)) {
-          const trophy = TROPHIES.find(t => t.id === id);
-          if (trophy) {
-            setNewlyUnlocked(trophy);
-            break;
-          }
-        }
-      }
+    // Si no hay notificaciones guardadas, es la primera carga.
+    // Marcamos los que ya se tienen como notificados para evitar spam
+    if (!stored) {
+      localStorage.setItem('notified_trophies', JSON.stringify(unlockedIds));
+      return;
     }
-    
-    prevUnlockedRef.current = currentUnlocked;
-    initialized.current = true;
-  }, [results]);
 
-  const dismissUnlock = () => setNewlyUnlocked(null);
+    const notified: string[] = JSON.parse(stored);
+    const notifiedSet = new Set(notified);
+    const newlyUnlocked = unlockedIds.filter(id => !notifiedSet.has(id));
 
-  const unlocked = results.filter(r => r.unlocked);
+    if (newlyUnlocked.length > 0) {
+      const newTrophies = newlyUnlocked.map(id => TROPHIES.find(t => t.id === id)!);
+      
+      // Añadir a la cola si no están ya ahí
+      setUnlockQueue(prev => {
+        const inQueue = new Set(prev.map(t => t.id));
+        const filtered = newTrophies.filter(t => !inQueue.has(t.id));
+        return [...prev, ...filtered];
+      });
+
+      // Guardar en persistencia para que no vuelvan a aparecer al recargar
+      const updatedNotified = [...notified, ...newlyUnlocked];
+      localStorage.setItem('notified_trophies', JSON.stringify(updatedNotified));
+    }
+  }, [results, sessions]);
+
+  // Dismiss elimina de la cola, o cierra el replay
+  const dismissOverlay = () => {
+    if (unlockQueue.length > 0) {
+      setUnlockQueue(prev => prev.slice(1));
+    } else {
+      setReplayedTrophy(null);
+    }
+  };
+  
+  const replayTrophy = (trophy: TrophyDef) => {
+    setReplayedTrophy(trophy);
+  };
+
+  // Corrección de duplicidad de trofeos separando correctamente los arrays
+  const unlocked = results.filter(r => r.unlocked && !r.trophy.esSecreto);
+  const secretUnlocked = results.filter(r => r.unlocked && r.trophy.esSecreto);
   const inProgress = results.filter(r => !r.unlocked && !r.trophy.esSecreto).sort((a, b) => b.progress - a.progress);
-  const secret = results.filter(r => r.trophy.esSecreto);
-  const secretUnlocked = secret.filter(r => r.unlocked);
-  const secretLocked = secret.filter(r => !r.unlocked);
+  const secretLocked = results.filter(r => !r.unlocked && r.trophy.esSecreto);
 
   return {
     results,
@@ -68,8 +89,9 @@ export function useTrophies(sessions: Session[]) {
     secretLocked,
     totalUnlocked: unlocked.length + secretUnlocked.length,
     totalTrophies: TROPHIES.length,
-    newlyUnlocked,
-    dismissUnlock,
-    featuredTrophies: unlocked.slice(-3).reverse(),
+    activeOverlayTrophy: unlockQueue.length > 0 ? unlockQueue[0] : replayedTrophy,
+    dismissOverlay,
+    replayTrophy,
+    featuredTrophies: [...unlocked, ...secretUnlocked].slice(-3).reverse(),
   };
 }
