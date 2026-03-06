@@ -202,4 +202,153 @@ export const TROPHIES: TrophyDef[] = [
   {
     id: 'metralleta', nombre: 'Metralleta', saga: 'Volumen', copa: 'oro',
     descripcion: '10,000 tiros totales', esSecreto: false, valorObjetivo: 10000, tipoMeta: 'cantidad', emoji: '🔫',
-    evaluate: (s) => { const c = totalShots(s); return { unlocked: c >= 10000, progress: Math
+    evaluate: (s) => { const c = totalShots(s); return { unlocked: c >= 10000, progress: Math.min(c / 10000, 1), current: c }; }
+  },
+  {
+    id: 'mamba', nombre: 'Mamba Mentality', saga: 'Constancia', copa: 'oro',
+    descripcion: '30 días de racha consecutiva', esSecreto: false, valorObjetivo: 30, tipoMeta: 'racha', emoji: '🐍',
+    evaluate: (s) => { const c = longestStreak(s); return { unlocked: c >= 30, progress: Math.min(c / 30, 1), current: c }; }
+  },
+  {
+    id: 'gran_capitan', nombre: 'El Gran Capitán', saga: 'Tiros Libres', copa: 'oro',
+    descripcion: '100 tiros libres consecutivos sin fallar', esSecreto: false, valorObjetivo: 100, tipoMeta: 'hito', emoji: '👑',
+    evaluate: (s) => {
+      const ft = sessionsByType(s, 'tl');
+      const hit = ft.some(x => x.total >= 100 && x.made === x.total);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'curry_mode', nombre: 'Curry Mode', saga: 'Triples', copa: 'oro',
+    descripcion: '50% en Triples (mín. 200 tiros/mes)', esSecreto: false, valorObjetivo: 50, tipoMeta: 'hito', emoji: '🍛',
+    evaluate: (s) => {
+      const limit = new Date(); limit.setDate(limit.getDate() - 30);
+      const recent3 = sessionsByType(s, '3p').filter(x => new Date(x.date) >= limit);
+      const t = totalShots(recent3), m = totalMade(recent3);
+      const hit = t >= 200 && (m / t) >= 0.5;
+      return { unlocked: hit, progress: hit ? 1 : 0, current: t >= 200 ? Math.round((m / t) * 100) : 0 };
+    }
+  },
+  {
+    id: 'goat', nombre: 'GOAT', saga: 'Leyenda', copa: 'oro',
+    descripcion: 'Desbloquea 20 trofeos', esSecreto: false, valorObjetivo: 20, tipoMeta: 'cantidad', emoji: '🐐',
+    evaluate: () => ({ unlocked: false, progress: 0, current: 0 })
+  },
+
+  // SECRETOS (10)
+  {
+    id: 'buho_nocturno', nombre: 'Búho Nocturno', saga: 'Horarios', copa: 'bronce',
+    descripcion: 'Registra una sesión después de medianoche', esSecreto: true, valorObjetivo: 1, tipoMeta: 'hito', emoji: '🦉',
+    evaluate: (s) => {
+      const hit = s.some(x => { 
+        if (!x.date.includes('T')) return false; 
+        const h = new Date(x.date).getHours(); 
+        return h >= 0 && h < 5; 
+      });
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'madrugador', nombre: 'Madrugador', saga: 'Horarios', copa: 'bronce',
+    descripcion: 'Registra una sesión antes de las 7am', esSecreto: true, valorObjetivo: 1, tipoMeta: 'hito', emoji: '🌅',
+    evaluate: (s) => {
+      const hit = s.some(x => { 
+        if (!x.date.includes('T')) return false; 
+        const h = new Date(x.date).getHours(); 
+        return h >= 5 && h < 7; 
+      });
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'hielo_venas', nombre: 'Hielo en las Venas', saga: 'Precisión', copa: 'oro',
+    descripcion: '100% acierto en sesión de ≥20 tiros', esSecreto: true, valorObjetivo: 1, tipoMeta: 'hito', emoji: '🧊',
+    evaluate: (s) => {
+      const hit = s.some(x => x.total >= 20 && x.made === x.total);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'centenario', nombre: 'Centenario', saga: 'Volumen', copa: 'oro',
+    descripcion: 'Registra 100 sesiones', esSecreto: true, valorObjetivo: 100, tipoMeta: 'cantidad', emoji: '💯',
+    evaluate: (s) => { const c = s.length; return { unlocked: c >= 100, progress: Math.min(c / 100, 1), current: c }; }
+  },
+  {
+    id: 'perfeccionista', nombre: 'Perfeccionista', saga: 'Precisión', copa: 'oro',
+    descripcion: '90% en cualquier zona (mín. 50 tiros)', esSecreto: true, valorObjetivo: 90, tipoMeta: 'hito', emoji: '✨',
+    evaluate: (s) => {
+      const byZone: Record<string, { m: number; t: number }> = {};
+      s.forEach(x => {
+        if (!byZone[x.zoneId]) byZone[x.zoneId] = { m: 0, t: 0 };
+        byZone[x.zoneId].m += x.made;
+        byZone[x.zoneId].t += x.total;
+      });
+      const hit = Object.values(byZone).some(z => z.t >= 50 && (z.m / z.t) >= 0.9);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'doble_doble', nombre: 'Doble-Doble', saga: 'Versatilidad', copa: 'plata',
+    descripcion: '50%+ en 2P y 3P el mismo día (mín. 20 c/u)', esSecreto: true, valorObjetivo: 1, tipoMeta: 'hito', emoji: '✌️',
+    evaluate: (s) => {
+      const byDay: Record<string, { m2: number; t2: number; m3: number; t3: number }> = {};
+      s.forEach(x => {
+        const d = x.date.split('T')[0];
+        if (!byDay[d]) byDay[d] = { m2: 0, t2: 0, m3: 0, t3: 0 };
+        if (x.zoneType === '2p') { byDay[d].m2 += x.made; byDay[d].t2 += x.total; }
+        if (x.zoneType === '3p') { byDay[d].m3 += x.made; byDay[d].t3 += x.total; }
+      });
+      const hit = Object.values(byDay).some(d => d.t2 >= 20 && d.t3 >= 20 && (d.m2 / d.t2) >= 0.5 && (d.m3 / d.t3) >= 0.5);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'triple_triple', nombre: 'Triple-Triple', saga: 'Triples', copa: 'plata',
+    descripcion: '33 triples en un solo día', esSecreto: true, valorObjetivo: 33, tipoMeta: 'hito', emoji: '3️⃣',
+    evaluate: (s) => {
+      const byDay: Record<string, number> = {};
+      sessionsByType(s, '3p').forEach(x => {
+        const d = x.date.split('T')[0];
+        byDay[d] = (byDay[d] || 0) + x.made;
+      });
+      const hit = Object.values(byDay).some(v => v >= 33);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'maraton', nombre: 'Maratón', saga: 'Volumen', copa: 'plata',
+    descripcion: '200 tiros en un solo día', esSecreto: true, valorObjetivo: 200, tipoMeta: 'hito', emoji: '🏃',
+    evaluate: (s) => {
+      const byDay: Record<string, number> = {};
+      s.forEach(x => { const d = x.date.split('T')[0]; byDay[d] = (byDay[d] || 0) + x.total; });
+      const hit = Object.values(byDay).some(v => v >= 200);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'coleccionista', nombre: 'Coleccionista', saga: 'Versatilidad', copa: 'bronce',
+    descripcion: '5 zonas distintas en un solo día', esSecreto: true, valorObjetivo: 5, tipoMeta: 'hito', emoji: '🃏',
+    evaluate: (s) => {
+      const byDay: Record<string, Set<string>> = {};
+      s.forEach(x => {
+        const d = x.date.split('T')[0];
+        if (!byDay[d]) byDay[d] = new Set();
+        byDay[d].add(x.zoneId);
+      });
+      const hit = Object.values(byDay).some(zones => zones.size >= 5);
+      return { unlocked: hit, progress: hit ? 1 : 0, current: hit ? 1 : 0 };
+    }
+  },
+  {
+    id: 'fantasma', nombre: 'Fantasma', saga: 'Misterio', copa: 'bronce',
+    descripcion: 'Registra sesiones 7 días seguidos', esSecreto: true, valorObjetivo: 7, tipoMeta: 'racha', emoji: '👻',
+    evaluate: (s) => { const c = longestStreak(s); return { unlocked: c >= 7, progress: Math.min(c / 7, 1), current: c }; }
+  },
+];
+
+export const CUP_CONFIG: Record<TrophyCup, { label: string; color: string; bg: string }> = {
+  bronce: { label: 'Bronce', color: '30 60% 50%', bg: '30 60% 50%' },
+  plata: { label: 'Plata', color: '220 10% 70%', bg: '220 10% 70%' },
+  oro: { label: 'Oro', color: '42 90% 55%', bg: '42 90% 55%' },
+  secreto: { label: 'Secreto', color: '270 60% 60%', bg: '270 60% 60%' },
+};
