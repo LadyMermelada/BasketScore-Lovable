@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useSessions } from '../hooks/useSessions';
 import { useAuth } from '../hooks/useAuth';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useTrophies } from '../hooks/useTrophies';
 import { ZONES } from '../lib/zones';
 import { calculateProStats, filterToday, filterLast30Days } from '../lib/stats';
 import { supabase } from '../lib/supabase';
@@ -16,15 +17,20 @@ import BottomNav from '../components/BottomNav';
 import ProfileView from '../components/ProfileView';
 import ClubView from '../components/ClubView';
 import AuthModal from '../components/AuthModal';
+import ProfileDashboard from '../components/ProfileDashboard';
+import TrophyModal from '../components/TrophyModal';
+import TrophyUnlockOverlay from '../components/TrophyUnlockOverlay';
 
 const Index = () => {
   const { sessions = [], addSession, deleteSession, importAll, loading } = useSessions();
   const { isGuest, user } = useAuth();
   const themeColor = useThemeColor();
+  const trophies = useTrophies(sessions);
   
   const [activeTab, setActiveTab] = useState<'cancha' | 'club' | 'perfil'>('cancha');
   const [modalOpen, setModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [trophyModalOpen, setTrophyModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [editSession, setEditSession] = useState<any | null>(null);
 
@@ -90,6 +96,17 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      <TrophyUnlockOverlay trophy={trophies.newlyUnlocked} onDismiss={trophies.dismissUnlock} />
+      <TrophyModal
+        open={trophyModalOpen}
+        onClose={() => setTrophyModalOpen(false)}
+        unlocked={trophies.unlocked}
+        inProgress={trophies.inProgress}
+        secretUnlocked={trophies.secretUnlocked}
+        secretLocked={trophies.secretLocked}
+        totalUnlocked={trophies.totalUnlocked}
+        totalTrophies={trophies.totalTrophies}
+      />
 
       <div className="p-4 max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
@@ -107,6 +124,11 @@ const Index = () => {
                   </div>
                 )}
                 <AppHeader sessions={sessions} onImport={importAll} />
+                <ProfileDashboard
+                  totalUnlocked={trophies.totalUnlocked}
+                  featuredTrophies={trophies.featuredTrophies}
+                  onOpenTrophies={() => setTrophyModalOpen(true)}
+                />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
@@ -137,7 +159,7 @@ const Index = () => {
           
           {activeTab === 'perfil' && (
             <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <ProfileView sessions={sessions} themeColor={themeColor} />
+              <ProfileView sessions={sessions} themeColor={themeColor} trophies={trophies} onOpenTrophies={() => setTrophyModalOpen(true)} />
             </motion.div>
           )}
         </AnimatePresence>
