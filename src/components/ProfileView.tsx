@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Session } from '../lib/sessions';
 import { calculateProStats } from '../lib/stats';
 import { TrophyResult } from '../hooks/useTrophies';
-import { CUP_CONFIG } from '../lib/trophies';
+import { CUP_CONFIG, TrophyDef } from '../lib/trophies';
 import { Button } from '@/components/ui/button';
 import { LogOut, Trash2, User, ShieldAlert, Palette, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,9 +27,10 @@ interface ProfileViewProps {
     totalTrophies: number;
   };
   onOpenTrophies: () => void;
+  onReplayTrophy: (trophy: TrophyDef) => void;
 }
 
-const ProfileView = ({ sessions, themeColor, trophies, onOpenTrophies }: ProfileViewProps) => {
+const ProfileView = ({ sessions, themeColor, trophies, onOpenTrophies, onReplayTrophy }: ProfileViewProps) => {
   const { user } = useAuth();
   const [metric, setMetric] = useState('global');
   const [range, setRange] = useState(30);
@@ -136,7 +137,8 @@ const ProfileView = ({ sessions, themeColor, trophies, onOpenTrophies }: Profile
             {allEarned.map(r => (
               <div
                 key={r.trophy.id}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-lg border"
+                onClick={() => onReplayTrophy(r.trophy)}
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-lg border cursor-pointer hover:scale-110 hover:shadow-lg transition-transform"
                 style={{
                   background: `hsl(${CUP_CONFIG[r.trophy.copa].bg} / 0.1)`,
                   borderColor: `hsl(${CUP_CONFIG[r.trophy.copa].bg} / 0.3)`,
@@ -251,7 +253,7 @@ const ProfileView = ({ sessions, themeColor, trophies, onOpenTrophies }: Profile
                     <td className="p-2 font-mono text-muted-foreground">{new Date(s.date).toLocaleDateString()}</td>
                     <td className="p-2 font-bold">{s.zoneId}</td>
                     <td className="p-2 font-mono text-muted-foreground">{s.made}/{s.total}</td>
-                    <td className="p-2 font-mono font-bold text-primary">{((s.made/s.total)*100).toFixed(0)}%</td>
+                    <td className="p-2 font-mono font-bold text-primary">{((s.made/(s.total||1))*100).toFixed(0)}%</td>
                   </tr>
                 ))}
               </tbody>
