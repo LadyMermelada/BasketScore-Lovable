@@ -163,9 +163,15 @@ const Index = () => {
             </motion.div>
           )}
           
-          {activeTab === 'perfil' && (
+       {activeTab === 'perfil' && (
             <motion.div key="perfil" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <ProfileView sessions={sessions} themeColor={themeColor} trophies={trophies} onOpenTrophies={() => setTrophyModalOpen(true)} />
+              <ProfileView 
+                sessions={sessions} 
+                themeColor={themeColor} 
+                trophies={trophies} 
+                onOpenTrophies={() => setTrophyModalOpen(true)} 
+                onReplayTrophy={trophies.replayTrophy} 
+              />
             </motion.div>
           )}
         </AnimatePresence>
