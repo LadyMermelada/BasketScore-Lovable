@@ -5,8 +5,10 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Session } from '../lib/sessions';
 import { calculateProStats } from '../lib/stats';
+import { TrophyResult } from '../hooks/useTrophies';
+import { CUP_CONFIG } from '../lib/trophies';
 import { Button } from '@/components/ui/button';
-import { LogOut, Trash2, User, ShieldAlert, Palette } from 'lucide-react';
+import { LogOut, Trash2, User, ShieldAlert, Palette, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { ThemePreset } from '../hooks/useThemeColor';
 
@@ -18,9 +20,16 @@ interface ProfileViewProps {
     currentTheme: ThemePreset;
     presets: ThemePreset[];
   };
+  trophies: {
+    unlocked: TrophyResult[];
+    secretUnlocked: TrophyResult[];
+    totalUnlocked: number;
+    totalTrophies: number;
+  };
+  onOpenTrophies: () => void;
 }
 
-const ProfileView = ({ sessions, themeColor }: ProfileViewProps) => {
+const ProfileView = ({ sessions, themeColor, trophies, onOpenTrophies }: ProfileViewProps) => {
   const { user } = useAuth();
   const [metric, setMetric] = useState('global');
   const [range, setRange] = useState(30);
@@ -73,6 +82,8 @@ const ProfileView = ({ sessions, themeColor }: ProfileViewProps) => {
     }
   };
 
+  const allEarned = [...trophies.unlocked, ...trophies.secretUnlocked];
+
   return (
     <div className="space-y-4 max-w-2xl mx-auto pb-10 px-1">
       {/* HEADER DEL PERFIL */}
@@ -109,6 +120,44 @@ const ProfileView = ({ sessions, themeColor }: ProfileViewProps) => {
           <span className="font-mono text-xl font-bold text-primary stat-glow">{careerPct}%</span>
         </motion.div>
       </div>
+
+      {/* GALERÍA DE TROFEOS */}
+      <motion.div className="glass-card p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Galería de Trofeos</span>
+          </div>
+          <span className="text-[0.6rem] font-mono font-bold text-primary">{trophies.totalUnlocked}/{trophies.totalTrophies}</span>
+        </div>
+
+        {allEarned.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {allEarned.map(r => (
+              <div
+                key={r.trophy.id}
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-lg border"
+                style={{
+                  background: `hsl(${CUP_CONFIG[r.trophy.copa].bg} / 0.1)`,
+                  borderColor: `hsl(${CUP_CONFIG[r.trophy.copa].bg} / 0.3)`,
+                }}
+                title={r.trophy.nombre}
+              >
+                {r.trophy.emoji}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground mb-3">Aún no has desbloqueado trofeos. ¡Sigue entrenando!</p>
+        )}
+
+        <button
+          onClick={onOpenTrophies}
+          className="w-full py-2 rounded-xl border border-primary/20 bg-primary/5 text-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/10 transition-colors"
+        >
+          Ver todos los logros
+        </button>
+      </motion.div>
 
       {/* Theme Color Picker */}
       <motion.div className="glass-card p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
