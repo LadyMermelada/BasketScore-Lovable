@@ -96,7 +96,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-      <TrophyUnlockOverlay trophy={trophies.newlyUnlocked} onDismiss={trophies.dismissUnlock} />
+      
+      <TrophyUnlockOverlay 
+        trophy={trophies.activeOverlayTrophy} 
+        onDismiss={trophies.dismissOverlay} 
+      />
+      
       <TrophyModal
         open={trophyModalOpen}
         onClose={() => setTrophyModalOpen(false)}
@@ -106,6 +111,7 @@ const Index = () => {
         secretLocked={trophies.secretLocked}
         totalUnlocked={trophies.totalUnlocked}
         totalTrophies={trophies.totalTrophies}
+        onReplayTrophy={trophies.replayTrophy}
       />
 
       <div className="p-4 max-w-7xl mx-auto">
