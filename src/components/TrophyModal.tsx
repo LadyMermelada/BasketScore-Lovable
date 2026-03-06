@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Trophy, Star } from 'lucide-react';
 import { TrophyResult } from '../hooks/useTrophies';
-import { CUP_CONFIG, TrophyCup } from '../lib/trophies';
+import { CUP_CONFIG, TrophyCup, TrophyDef } from '../lib/trophies';
 import { Progress } from './ui/progress';
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   secretLocked: TrophyResult[];
   totalUnlocked: number;
   totalTrophies: number;
+  onReplayTrophy: (trophy: TrophyDef) => void;
 }
 
 function CupBadge({ copa }: { copa: TrophyCup }) {
@@ -31,12 +32,21 @@ function CupBadge({ copa }: { copa: TrophyCup }) {
   );
 }
 
-function TrophyCard({ result, revealed = true }: { result: TrophyResult; revealed?: boolean }) {
+interface TrophyCardProps {
+  result: TrophyResult;
+  revealed?: boolean;
+  onReplay?: () => void;
+}
+
+function TrophyCard({ result, revealed = true, onReplay }: TrophyCardProps) {
   const { trophy, unlocked, progress, current } = result;
   const isProgressType = trophy.tipoMeta === 'cantidad' || trophy.tipoMeta === 'racha';
 
   return (
-    <div className={`glass-card p-3 flex gap-3 items-start transition-all ${unlocked ? 'border-primary/20' : 'opacity-70'}`}>
+    <div 
+      className={`glass-card p-3 flex gap-3 items-start transition-all ${unlocked ? 'border-primary/20 cursor-pointer hover:bg-primary/5 hover:border-primary/50' : 'opacity-70'}`}
+      onClick={() => unlocked && onReplay && onReplay()}
+    >
       <div
         className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
         style={{
@@ -47,12 +57,17 @@ function TrophyCard({ result, revealed = true }: { result: TrophyResult; reveale
         {revealed ? trophy.emoji : <Lock className="w-4 h-4 text-muted-foreground" />}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex flex-wrap items-center gap-2 mb-0.5">
           <span className="text-xs font-bold truncate">{revealed ? trophy.nombre : '???'}</span>
           <CupBadge copa={trophy.copa} />
+          {trophy.esSecreto && (
+            <span className="text-[0.55rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              Secreto
+            </span>
+          )}
         </div>
         <p className="text-[0.65rem] text-muted-foreground leading-tight mb-1.5">
-          {revealed ? trophy.descripcion : 'Trofeo secreto — sigue jugando para descubrirlo'}
+          {revealed ? trophy.descripcion : 'Logro oculto — sigue jugando para descubrir el misterio.'}
         </p>
         {revealed && isProgressType && !unlocked && (
           <div className="flex items-center gap-2">
@@ -73,7 +88,7 @@ function TrophyCard({ result, revealed = true }: { result: TrophyResult; reveale
   );
 }
 
-export default function TrophyModal({ open, onClose, unlocked, inProgress, secretUnlocked, secretLocked, totalUnlocked, totalTrophies }: Props) {
+export default function TrophyModal({ open, onClose, unlocked, inProgress, secretUnlocked, secretLocked, totalUnlocked, totalTrophies, onReplayTrophy }: Props) {
   if (!open) return null;
 
   return (
@@ -112,6 +127,7 @@ export default function TrophyModal({ open, onClose, unlocked, inProgress, secre
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            
             {/* Unlocked */}
             {(unlocked.length > 0 || secretUnlocked.length > 0) && (
               <section>
@@ -120,7 +136,7 @@ export default function TrophyModal({ open, onClose, unlocked, inProgress, secre
                 </h3>
                 <div className="space-y-2">
                   {[...unlocked, ...secretUnlocked].map(r => (
-                    <TrophyCard key={r.trophy.id} result={r} />
+                    <TrophyCard key={r.trophy.id} result={r} onReplay={() => onReplayTrophy(r.trophy)} />
                   ))}
                 </div>
               </section>
@@ -140,7 +156,7 @@ export default function TrophyModal({ open, onClose, unlocked, inProgress, secre
               </section>
             )}
 
-            {/* Secret */}
+            {/* Secret Locked */}
             {secretLocked.length > 0 && (
               <section>
                 <h3 className="text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground mb-2">
@@ -153,6 +169,7 @@ export default function TrophyModal({ open, onClose, unlocked, inProgress, secre
                 </div>
               </section>
             )}
+            
           </div>
         </motion.div>
       </motion.div>
