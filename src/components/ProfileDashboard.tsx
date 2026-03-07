@@ -10,8 +10,9 @@ interface Props {
 }
 
 export default function ProfileDashboard({ totalUnlocked, featuredTrophies, onOpenTrophies }: Props) {
-  const { user } = useAuth();
-  const displayName = user?.email?.split('@')[0] || 'Jugador';
+  const { user, isGuest } = useAuth();
+  const displayName = isGuest ? 'Jugador invitado' : (user?.email?.split('@')[0] || 'Jugador');
+  const subtitle = isGuest ? 'Regístrate para ver todas las funciones' : 'BasketScore';
 
   return (
     <motion.div
@@ -30,21 +31,23 @@ export default function ProfileDashboard({ totalUnlocked, featuredTrophies, onOp
         {/* Name + club */}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold truncate">{displayName}</p>
-          <p className="text-[0.6rem] text-muted-foreground font-bold uppercase tracking-wider">BasketScore</p>
+          <p className="text-[0.6rem] text-muted-foreground font-bold uppercase tracking-wider">{subtitle}</p>
         </div>
 
         {/* Featured trophies */}
-        <div className="flex items-center gap-1">
-          {featuredTrophies.map(r => (
-            <span
-              key={r.trophy.id}
-              className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-sm"
-              title={r.trophy.nombre}
-            >
-              {r.trophy.emoji}
-            </span>
-          ))}
-        </div>
+        {featuredTrophies.length > 0 && (
+          <div className="flex items-center gap-1">
+            {featuredTrophies.map(r => (
+              <span
+                key={r.trophy.id}
+                className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-sm"
+                title={r.trophy.nombre}
+              >
+                {r.trophy.emoji}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Badge total */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 shrink-0">
