@@ -124,11 +124,6 @@ const Index = () => {
               exit={{ opacity: 0, y: -10 }}
             >
               <div className="mb-6">
-                {isGuest && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center text-[10px] font-black text-primary mb-4 tracking-widest uppercase">
-                    🏀 MODO INVITADO
-                  </div>
-                )}
                 <AppHeader sessions={sessions} onImport={importAll} />
                 <ProfileDashboard
                   totalUnlocked={trophies.totalUnlocked}
@@ -138,7 +133,7 @@ const Index = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-                <div className="bg-card rounded-3xl border border-border p-4 shadow-sm flex items-center justify-center overflow-hidden">
+                <div className="bg-card rounded-2xl border border-border p-2 sm:p-4 shadow-sm flex items-center justify-center overflow-hidden -mx-2 sm:mx-0">
                   <BasketCourt sessions={sessions} onZoneClick={handleZoneClick} />
                 </div>
 
