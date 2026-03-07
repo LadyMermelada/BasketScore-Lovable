@@ -38,8 +38,53 @@ const ZONE_CENTERS: Record<string, { x: number; y: number }> = {
   Doble_Ala_Izq: { x: 120, y: 175 },
 };
 
-// Rim position — roughly where the basket is on a half-court
 const RIM = { x: 250, y: 47 };
+
+/**
+ * Maps a shooting percentage (0-100) to an HSL color string.
+ * 0%   → court background (very dark, near-black with slight primary tint)
+ * 60%  → primary color at full saturation
+ * 100% → white with a tint of primary
+ */
+function pctToFill(pct: number): string {
+  // Clamp
+  const p = Math.max(0, Math.min(100, pct));
+
+  if (p <= 60) {
+    // Interpolate from background-dark to primary
+    // At 0%: lightness ~8%, saturation ~15%  (dark bg)
+    // At 60%: lightness ~55%, saturation ~80% (primary)
+    const t = p / 60;
+    const lightness = 8 + t * 47;   // 8 → 55
+    const saturation = 15 + t * 65;  // 15 → 80
+    const alpha = 0.15 + t * 0.85;   // subtle at 0, full at 60
+    return `hsla(var(--primary) / ${alpha.toFixed(2)})`;
+  } else {
+    // 61-100%: primary → white-tinted
+    // Increase lightness from 55% toward 85%, reduce saturation
+    const t = (p - 60) / 40;
+    const lightness = 55 + t * 30;  // 55 → 85
+    const saturation = 80 - t * 40; // 80 → 40
+    const alpha = 1;
+    return `hsla(var(--primary) / ${alpha})`;
+  }
+}
+
+/**
+ * Returns opacity + a lightness-shift approach using two layers:
+ * base primary layer + white overlay for high percentages
+ */
+function getZoneStyle(pct: number): { primaryOpacity: number; whiteOpacity: number } {
+  const p = Math.max(0, Math.min(100, pct));
+
+  if (p <= 60) {
+    const t = p / 60;
+    return { primaryOpacity: 0.08 + t * 0.82, whiteOpacity: 0 };
+  } else {
+    const t = (p - 60) / 40;
+    return { primaryOpacity: 0.9, whiteOpacity: t * 0.45 };
+  }
+}
 
 export default function BasketCourt({ sessions, onZoneClick }: Props) {
   const zoneStats = useMemo(() => {
@@ -61,27 +106,51 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
     <div className="relative w-full" style={{ aspectRatio: '500/350' }}>
       <svg viewBox="0 0 500 350" className="w-full h-full">
         <defs>
-          {/* Radial gradient per zone — origin at rim, intensity based on % */}
-          {ZONES.map(zone => {
-            const pct = zoneStats[zone.id] ?? -1;
-            const intensity = pct <= 0 ? 0.04 : Math.max(pct / 100, 0.12);
-            return (
-              <radialGradient
-                key={`grad-${zone.id}`}
-                id={`grad-${zone.id}`}
-                cx={RIM.x}
-                cy={RIM.y}
-                r="320"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={Math.min(intensity * 1.8, 0.9)} />
-                <stop offset="40%" stopColor="hsl(var(--primary))" stopOpacity={intensity * 0.6} />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={intensity * 0.1} />
-              </radialGradient>
-            );
-          })}
+          {/* Gaussian blur for color blending between zones */}
+          <filter id="zone-blur">
+            <feGaussianBlur stdDeviation="12" />
+          </filter>
+          {/* Clip to court bounds so blur doesn't leak */}
+          <clipPath id="court-clip">
+            <rect x="0" y="0" width="500" height="350" />
+          </clipPath>
         </defs>
 
+        {/* Blurred color layer — renders all zone fills with blur so they blend */}
+        <g clipPath="url(#court-clip)">
+          <g filter="url(#zone-blur)">
+            {ZONES.map(zone => {
+              const path = ZONE_PATHS[zone.id];
+              const pct = zoneStats[zone.id];
+              if (!path || pct < 0) return null;
+
+              const { primaryOpacity, whiteOpacity } = getZoneStyle(pct);
+
+              return (
+                <g key={`blur-${zone.id}`}>
+                  {/* Primary color layer */}
+                  {path.d ? (
+                    <path d={path.d} fill="hsl(var(--primary))" opacity={primaryOpacity} />
+                  ) : path.rect ? (
+                    <rect x={path.rect.x} y={path.rect.y} width={path.rect.w} height={path.rect.h}
+                      fill="hsl(var(--primary))" opacity={primaryOpacity} />
+                  ) : null}
+                  {/* White overlay for high percentages */}
+                  {whiteOpacity > 0 && (
+                    path.d ? (
+                      <path d={path.d} fill="white" opacity={whiteOpacity} />
+                    ) : path.rect ? (
+                      <rect x={path.rect.x} y={path.rect.y} width={path.rect.w} height={path.rect.h}
+                        fill="white" opacity={whiteOpacity} />
+                    ) : null
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        </g>
+
+        {/* Interactive zones — transparent but clickable, with subtle borders */}
         {ZONES.map((zone, i) => {
           const path = ZONE_PATHS[zone.id];
           const center = ZONE_CENTERS[zone.id];
@@ -102,7 +171,7 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
               {path.d ? (
                 <path
                   d={path.d}
-                  fill={`url(#grad-${zone.id})`}
+                  fill="transparent"
                   stroke="hsl(var(--primary))"
                   strokeWidth="0.8"
                   strokeOpacity="0.25"
@@ -110,11 +179,9 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
                 />
               ) : path.rect ? (
                 <rect
-                  x={path.rect.x}
-                  y={path.rect.y}
-                  width={path.rect.w}
-                  height={path.rect.h}
-                  fill={`url(#grad-${zone.id})`}
+                  x={path.rect.x} y={path.rect.y}
+                  width={path.rect.w} height={path.rect.h}
+                  fill="transparent"
                   stroke="hsl(var(--primary))"
                   strokeWidth="0.8"
                   strokeOpacity="0.25"
@@ -129,10 +196,12 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill="white"
-                  className="pointer-events-none select-none font-mono font-bold"
+                  className="pointer-events-none select-none"
                   style={{
-                    fontSize: '18px',
+                    fontSize: '16px',
                     fontFamily: "'JetBrains Mono', monospace",
+                    fontWeight: 800,
+                    fontStyle: 'italic',
                   }}
                 >
                   {pct.toFixed(0)}%
@@ -142,13 +211,12 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
           );
         })}
 
-        {/* Vectorial Rim */}
+        {/* Vectorial Rim — minimal: circle + backboard */}
         <g
           className="cursor-pointer"
           onClick={() => onZoneClick('Pintura_Baja')}
         >
           <title>Aro / Rim</title>
-          {/* Rim circle */}
           <circle
             cx={RIM.x}
             cy={RIM.y}
@@ -158,14 +226,13 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
             strokeWidth="2"
             opacity="0.7"
           />
-          {/* Net lines — simple 3-line suggestion */}
-          <line x1={RIM.x - 8} y1={RIM.y + 5} x2={RIM.x - 4} y2={RIM.y + 16} stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.35" />
-          <line x1={RIM.x} y1={RIM.y + 11} x2={RIM.x} y2={RIM.y + 18} stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.35" />
-          <line x1={RIM.x + 8} y1={RIM.y + 5} x2={RIM.x + 4} y2={RIM.y + 16} stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.35" />
-          {/* Backboard */}
-          <line x1={RIM.x - 22} y1={RIM.y - 14} x2={RIM.x + 22} y2={RIM.y - 14} stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.5" />
-          {/* Connector rim to board */}
-          <line x1={RIM.x} y1={RIM.y - 11} x2={RIM.x} y2={RIM.y - 14} stroke="hsl(var(--primary))" strokeWidth="1.2" opacity="0.5" />
+          <line
+            x1={RIM.x - 22} y1={RIM.y - 14}
+            x2={RIM.x + 22} y2={RIM.y - 14}
+            stroke="hsl(var(--primary))"
+            strokeWidth="1.5"
+            opacity="0.5"
+          />
         </g>
       </svg>
     </div>
