@@ -41,48 +41,18 @@ const ZONE_CENTERS: Record<string, { x: number; y: number }> = {
 const RIM = { x: 250, y: 47 };
 
 /**
- * Maps a shooting percentage (0-100) to an HSL color string.
- * 0%   → court background (very dark, near-black with slight primary tint)
- * 60%  → primary color at full saturation
- * 100% → white with a tint of primary
+ * Maps pct to opacity/white-overlay for the radial gradient approach.
+ * 0% → nearly invisible (bg), 60% → full primary, 100% → primary + white tint
  */
-function pctToFill(pct: number): string {
-  // Clamp
+function getZoneIntensity(pct: number) {
   const p = Math.max(0, Math.min(100, pct));
-
-  if (p <= 60) {
-    // Interpolate from background-dark to primary
-    // At 0%: lightness ~8%, saturation ~15%  (dark bg)
-    // At 60%: lightness ~55%, saturation ~80% (primary)
-    const t = p / 60;
-    const lightness = 8 + t * 47;   // 8 → 55
-    const saturation = 15 + t * 65;  // 15 → 80
-    const alpha = 0.15 + t * 0.85;   // subtle at 0, full at 60
-    return `hsla(var(--primary) / ${alpha.toFixed(2)})`;
-  } else {
-    // 61-100%: primary → white-tinted
-    // Increase lightness from 55% toward 85%, reduce saturation
-    const t = (p - 60) / 40;
-    const lightness = 55 + t * 30;  // 55 → 85
-    const saturation = 80 - t * 40; // 80 → 40
-    const alpha = 1;
-    return `hsla(var(--primary) / ${alpha})`;
-  }
-}
-
-/**
- * Returns opacity + a lightness-shift approach using two layers:
- * base primary layer + white overlay for high percentages
- */
-function getZoneStyle(pct: number): { primaryOpacity: number; whiteOpacity: number } {
-  const p = Math.max(0, Math.min(100, pct));
-
   if (p <= 60) {
     const t = p / 60;
-    return { primaryOpacity: 0.08 + t * 0.82, whiteOpacity: 0 };
+    // center opacity ramps from 0.05 to 0.9, edge stays dim
+    return { centerOpacity: 0.05 + t * 0.85, edgeOpacity: 0.02 + t * 0.15, whiteOverlay: 0 };
   } else {
     const t = (p - 60) / 40;
-    return { primaryOpacity: 0.9, whiteOpacity: t * 0.45 };
+    return { centerOpacity: 0.9, edgeOpacity: 0.17, whiteOverlay: t * 0.4 };
   }
 }
 
@@ -106,57 +76,62 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
     <div className="relative w-full" style={{ aspectRatio: '500/350' }}>
       <svg viewBox="0 0 500 350" className="w-full h-full">
         <defs>
-          {/* Gaussian blur for color blending between zones */}
-          <filter id="zone-blur">
-            <feGaussianBlur stdDeviation="12" />
-          </filter>
-          {/* Clip to court bounds so blur doesn't leak */}
-          <clipPath id="court-clip">
-            <rect x="0" y="0" width="500" height="350" />
-          </clipPath>
+          {ZONES.map(zone => {
+            const pct = zoneStats[zone.id] ?? -1;
+            const { centerOpacity, edgeOpacity, whiteOverlay } = pct >= 0
+              ? getZoneIntensity(pct)
+              : { centerOpacity: 0.04, edgeOpacity: 0.01, whiteOverlay: 0 };
+
+            return [
+              <radialGradient
+                key={`grad-${zone.id}`}
+                id={`grad-${zone.id}`}
+                cx={RIM.x}
+                cy={RIM.y}
+                r="320"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={centerOpacity} />
+                <stop offset="40%" stopColor="hsl(var(--primary))" stopOpacity={centerOpacity * 0.55} />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={edgeOpacity} />
+              </radialGradient>,
+              // White tint overlay gradient for high percentages
+              whiteOverlay > 0 ? (
+                <radialGradient
+                  key={`white-${zone.id}`}
+                  id={`white-${zone.id}`}
+                  cx={RIM.x}
+                  cy={RIM.y}
+                  r="320"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0%" stopColor="white" stopOpacity={whiteOverlay} />
+                  <stop offset="50%" stopColor="white" stopOpacity={whiteOverlay * 0.3} />
+                  <stop offset="100%" stopColor="white" stopOpacity={0} />
+                </radialGradient>
+              ) : null,
+            ];
+          })}
         </defs>
 
-        {/* Blurred color layer — renders all zone fills with blur so they blend */}
-        <g clipPath="url(#court-clip)">
-          <g filter="url(#zone-blur)">
-            {ZONES.map(zone => {
-              const path = ZONE_PATHS[zone.id];
-              const pct = zoneStats[zone.id];
-              if (!path || pct < 0) return null;
-
-              const { primaryOpacity, whiteOpacity } = getZoneStyle(pct);
-
-              return (
-                <g key={`blur-${zone.id}`}>
-                  {/* Primary color layer */}
-                  {path.d ? (
-                    <path d={path.d} fill="hsl(var(--primary))" opacity={primaryOpacity} />
-                  ) : path.rect ? (
-                    <rect x={path.rect.x} y={path.rect.y} width={path.rect.w} height={path.rect.h}
-                      fill="hsl(var(--primary))" opacity={primaryOpacity} />
-                  ) : null}
-                  {/* White overlay for high percentages */}
-                  {whiteOpacity > 0 && (
-                    path.d ? (
-                      <path d={path.d} fill="white" opacity={whiteOpacity} />
-                    ) : path.rect ? (
-                      <rect x={path.rect.x} y={path.rect.y} width={path.rect.w} height={path.rect.h}
-                        fill="white" opacity={whiteOpacity} />
-                    ) : null
-                  )}
-                </g>
-              );
-            })}
-          </g>
-        </g>
-
-        {/* Interactive zones — transparent but clickable, with subtle borders */}
         {ZONES.map((zone, i) => {
           const path = ZONE_PATHS[zone.id];
           const center = ZONE_CENTERS[zone.id];
           const pct = zoneStats[zone.id];
+          const hasWhite = pct > 60;
 
           if (!path) return null;
+
+          const shapeProps = path.d
+            ? { as: 'path' as const, d: path.d }
+            : path.rect
+            ? { as: 'rect' as const, x: path.rect.x, y: path.rect.y, width: path.rect.w, height: path.rect.h }
+            : null;
+
+          if (!shapeProps) return null;
+
+          const ShapeEl = shapeProps.as === 'path' ? 'path' : 'rect';
+          const { as, ...sProps } = shapeProps;
 
           return (
             <motion.g
@@ -168,26 +143,24 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.03, duration: 0.3 }}
             >
-              {path.d ? (
-                <path
-                  d={path.d}
-                  fill="transparent"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="0.8"
-                  strokeOpacity="0.25"
-                  className="transition-all duration-300 group-hover:stroke-opacity-60 group-hover:stroke-[1.2px]"
+              {/* Primary radial gradient fill */}
+              <ShapeEl
+                {...sProps}
+                fill={`url(#grad-${zone.id})`}
+                stroke="hsl(var(--primary))"
+                strokeWidth="0.8"
+                strokeOpacity="0.25"
+                className="transition-all duration-300 group-hover:stroke-opacity-60 group-hover:stroke-[1.2px]"
+              />
+              {/* White tint overlay for >60% */}
+              {hasWhite && (
+                <ShapeEl
+                  {...sProps}
+                  fill={`url(#white-${zone.id})`}
+                  stroke="none"
+                  className="pointer-events-none"
                 />
-              ) : path.rect ? (
-                <rect
-                  x={path.rect.x} y={path.rect.y}
-                  width={path.rect.w} height={path.rect.h}
-                  fill="transparent"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="0.8"
-                  strokeOpacity="0.25"
-                  className="transition-all duration-300 group-hover:stroke-opacity-60 group-hover:stroke-[1.2px]"
-                />
-              ) : null}
+              )}
 
               {center && pct >= 0 && (
                 <text
@@ -211,16 +184,14 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
           );
         })}
 
-        {/* Vectorial Rim — minimal: circle + backboard */}
+        {/* Vectorial Rim — circle + backboard only */}
         <g
           className="cursor-pointer"
           onClick={() => onZoneClick('Pintura_Baja')}
         >
           <title>Aro / Rim</title>
           <circle
-            cx={RIM.x}
-            cy={RIM.y}
-            r="11"
+            cx={RIM.x} cy={RIM.y} r="11"
             fill="none"
             stroke="hsl(var(--primary))"
             strokeWidth="2"
