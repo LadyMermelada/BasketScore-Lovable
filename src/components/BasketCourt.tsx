@@ -77,18 +77,18 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
           const ShapeEl = shapeProps.as === 'path' ? 'path' : 'rect';
           const { as, ...sProps } = shapeProps;
 
-          // Matemática de opacidades basada en la escala de 0 a 100
-          let baseOpacity = 0;
-          let whiteOpacity = 0;
-
-          if (pct >= 0 && pct <= 60) {
-            // Del 0% (fondo) al 60% (color full)
-            baseOpacity = 0.05 + (pct / 60) * 0.95; 
-          } else if (pct > 60) {
-            // Del 61% al 100%: Base a full, sumamos blanco
-            baseOpacity = 1;
-            // Alcanza 0.85 de blanco al 100% (para dejar un tinte sutil del color original)
-            whiteOpacity = ((pct - 60) / 40) * 0.85; 
+          // Matemática de Tiers de Opacidad Sólida (Escalones de 10%)
+          // Redondeamos hacia abajo para crear bloques visuales sólidos.
+          let tieredOpacity = 0;
+          if (pct >= 0) {
+            const tier = Math.floor(pct / 10) * 10;
+            // Si es Escalón 0 (0-9%) -> Muy tenue
+            if (tier === 0) {
+              tieredOpacity = 0.05;
+            } else {
+              // Del Escalón 10% (0.1) al Escalón 100% (1.0)
+              tieredOpacity = tier / 100;
+            }
           }
 
           return (
@@ -101,35 +101,29 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.03, duration: 0.3 }}
             >
-              {/* CAPA 1: Color Base Primario */}
+              {/* CAPA 1: Color Sólido Con Tiers De Opacidad */}
               {pct !== -1 && (
                 <ShapeEl
                   {...sProps}
                   fill="hsl(var(--primary))"
-                  fillOpacity={baseOpacity}
-                  className="transition-all duration-300"
-                />
-              )}
-              
-              {/* CAPA 2: Superposición Blanca para valores > 60% */}
-              {whiteOpacity > 0 && (
-                <ShapeEl
-                  {...sProps}
-                  fill="white"
-                  fillOpacity={whiteOpacity}
-                  className="pointer-events-none transition-all duration-300"
+                  fillOpacity={tieredOpacity}
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="0.8"
+                  strokeOpacity="0.25"
+                  className="transition-all duration-300 group-hover:stroke-opacity-80 group-hover:stroke-[1.5px]"
                 />
               )}
 
-              {/* CAPA 3: Los bordes de la zona (siempre visibles) */}
-              <ShapeEl
-                {...sProps}
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="0.8"
-                strokeOpacity="0.25"
-                className="transition-all duration-300 group-hover:stroke-opacity-80 group-hover:stroke-[1.5px]"
-              />
+              {/* CAPA 2: Los bordes de la zona (siempre visibles si no hay color) */}
+              {pct === -1 && (
+                <ShapeEl
+                  {...sProps}
+                  fill="none"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="0.8"
+                  strokeOpacity="0.25"
+                />
+              )}
 
               {/* Etiqueta de porcentaje */}
               {center && pct >= 0 && (
@@ -138,7 +132,7 @@ export default function BasketCourt({ sessions, onZoneClick }: Props) {
                   y={center.y}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill={pct > 80 ? "hsl(var(--primary-foreground))" : "white"}
+                  fill="white"
                   className="pointer-events-none select-none"
                   style={{
                     fontSize: '16px',
